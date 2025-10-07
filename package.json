@@ -1,0 +1,28 @@
+{
+  "name": "2025_2-sistemas-de-informacion",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Matiasapp/2025_02-Sistemas-De-Informacion.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Matiasapp/2025_02-Sistemas-De-Informacion/issues"
+  },
+  "homepage": "https://github.com/Matiasapp/2025_02-Sistemas-De-Informacion#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "dotenv": "^17.2.3",
+    "nodemon": "^3.1.10"
+  }
+}
