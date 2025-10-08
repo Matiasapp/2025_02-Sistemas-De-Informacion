@@ -19,7 +19,9 @@
   },
   "homepage": "https://github.com/Matiasapp/2025_02-Sistemas-De-Informacion#readme",
   "dependencies": {
-    "express": "^5.1.0"
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "express-ejs-layouts": "^2.5.1"
   },
   "devDependencies": {
     "dotenv": "^17.2.3",
