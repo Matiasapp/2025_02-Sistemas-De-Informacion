@@ -6,6 +6,7 @@ import indexRouter from "./routes/index.routes.js";
 import loginRouter from "./routes/login.routes.js";
 import registerRouter from "./routes/register.routes.js";
 import carritoRouter from "./routes/carrito.routes.js";
+import { pool } from "./db.js";
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -15,7 +16,12 @@ app.set("view engine", "ejs");
 app.set("views", __dirname + "/views");
 app.set("layout", "layouts/layout");
 app.use(expressLayouts);
-app.use(express.static("public"));
+app.use(express.static("src/public"));
+
+app.get("/ping", async (req, res) => {
+  const [result] = await pool.query("SELECT 1+1 AS result");
+  res.json(result);
+});
 
 app.use(indexRouter);
 app.use(loginRouter);

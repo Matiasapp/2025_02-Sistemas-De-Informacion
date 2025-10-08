@@ -1,0 +1,128 @@
+-- ===========================
+-- BASE DE DATOS DE TIENDA ONLINE
+-- ===========================
+CREATE DATABASE tienda_online;
+USE tienda_online;
+
+-- ===========================
+-- TABLA: Tipos de Usuario
+-- ===========================
+CREATE TABLE user_type (
+  type_ID INT AUTO_INCREMENT PRIMARY KEY,
+  type_name VARCHAR(50) NOT NULL,
+  description VARCHAR(255)
+);
+
+-- ===========================
+-- TABLA: Usuarios
+-- ===========================
+CREATE TABLE users (
+  user_ID INT AUTO_INCREMENT PRIMARY KEY,
+  type_ID INT NOT NULL,
+  rut VARCHAR(15) DEFAULT NULL
+  user VARCHAR(100) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  address VARCHAR(255),
+  firstname varchar(20),
+  lastname varchar(50),
+  phone VARCHAR(20),
+  
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (type_ID) REFERENCES user_types(type_ID)
+);
+
+-- ===========================
+-- TABLA: Categorías de Productos
+-- ===========================
+CREATE TABLE categories (
+  category_ID INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description VARCHAR(255)
+);
+
+-- ===========================
+-- TABLA: Productos
+-- ===========================
+CREATE TABLE products (
+  product_ID INT AUTO_INCREMENT PRIMARY KEY,
+  category_ID INT,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  price DECIMAL(10,2) NOT NULL,
+  size VARCHAR(10),
+  color VARCHAR(50)
+  stock INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_ID) REFERENCES categories(category_ID)
+);
+
+-- ===========================
+-- TABLA: Carrito de Compras
+-- ===========================
+CREATE TABLE cart (
+  cart_ID INT AUTO_INCREMENT PRIMARY KEY,
+  user_ID INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_ID) REFERENCES users(user_ID)
+);
+
+-- ===========================
+-- TABLA: Items del Carrito
+-- ===========================
+CREATE TABLE cart_items (
+  cart_item_ID INT AUTO_INCREMENT PRIMARY KEY,
+  cart_ID INT NOT NULL,
+  product_ID INT NOT NULL,
+  quantity INT DEFAULT 1,
+  FOREIGN KEY (cart_ID) REFERENCES cart(cart_ID),
+  FOREIGN KEY (product_ID) REFERENCES products(product_ID)
+);
+
+-- ===========================
+-- TABLA: Órdenes / Pedidos
+-- ===========================
+CREATE TABLE orders (
+  order_ID INT AUTO_INCREMENT PRIMARY KEY,
+  user_ID INT NOT NULL,
+  order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  status ENUM('pendiente', 'pagado', 'enviado', 'entregado', 'cancelado') DEFAULT 'pendiente',
+  FOREIGN KEY (user_ID) REFERENCES users(user_ID)
+);
+
+-- ===========================
+-- TABLA: Items de las Órdenes
+-- ===========================
+CREATE TABLE order_items (
+  order_item_ID INT AUTO_INCREMENT PRIMARY KEY,
+  order_ID INT NOT NULL,
+  product_ID INT NOT NULL,
+  quantity INT DEFAULT 1,
+  price DECIMAL(10,2) NOT NULL,
+  FOREIGN KEY (order_ID) REFERENCES orders(order_ID),
+  FOREIGN KEY (product_ID) REFERENCES products(product_ID)
+);
+
+-- ===========================
+-- TABLA: Pagos
+-- ===========================
+CREATE TABLE payments (
+  payment_ID INT AUTO_INCREMENT PRIMARY KEY,
+  order_ID INT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  payment_method ENUM('tarjeta', 'transferencia', 'efectivo') DEFAULT 'tarjeta',
+  payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_ID) REFERENCES orders(order_ID)
+);
+
+-- ===========================
+-- TABLA: Entregas
+-- ===========================
+CREATE TABLE deliveries (
+  delivery_ID INT AUTO_INCREMENT PRIMARY KEY,
+  order_ID INT NOT NULL,
+  delivery_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  status ENUM('pendiente', 'en camino', 'entregado') DEFAULT 'pendiente',
+  tracking_number VARCHAR(100),
+  FOREIGN KEY (order_ID) REFERENCES orders(order_ID)
+);
