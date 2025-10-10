@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
-import bodyParser from "body-parser";
 import { registerUser } from "./ControladorRegistro.js";
 
 const __filename = fileURLToPath(import.meta.url);
