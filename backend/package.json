@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch ./server.js"
   },
   "repository": {
     "type": "git",
@@ -19,9 +19,9 @@
   },
   "homepage": "https://github.com/Matiasapp/2025_02-Sistemas-De-Informacion#readme",
   "dependencies": {
-    "ejs": "^3.1.10",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
-    "express-ejs-layouts": "^2.5.1",
     "mysql2": "^3.15.1"
   },
   "devDependencies": {
