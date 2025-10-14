@@ -8,9 +8,11 @@ import {
   MenuItems,
 } from "@headlessui/react";
 import { Bars3Icon, BellIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import LogoutButton from "./LogOut";
+import { useAuth } from "../context/authcontext";
 
 const navigation = [
-  { name: "Pagina Principal", href: "#", current: true },
+  { name: "Pagina Principal", href: "/", current: true },
   { name: "Hombre", href: "/Hombre", current: false },
   { name: "Mujer", href: "/Mujer", current: false },
   { name: "Accesorios", href: "/accesorios", current: false },
@@ -21,6 +23,7 @@ function classNames(...classes: string[]) {
 }
 
 export function Nav() {
+  const { user } = useAuth();
   return (
     <Disclosure
       as="nav"
@@ -93,35 +96,48 @@ export function Nav() {
                 />
               </MenuButton>
 
-              <MenuItems
-                transition
-                className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-gray-800 py-1 outline outline-1 -outline-offset-1 outline-white/10 transition data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
-              >
-                <MenuItem>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-gray-300 data-[focus]:bg-white/5 data-[focus]:outline-none"
-                  >
-                    Tu perfil
-                  </a>
-                </MenuItem>
-                <MenuItem>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-gray-300 data-[focus]:bg-white/5 data-[focus]:outline-none"
-                  >
-                    Ajustes
-                  </a>
-                </MenuItem>
-                <MenuItem>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-gray-300 data-[focus]:bg-white/5 data-[focus]:outline-none"
-                  >
-                    Cerrar Sesión
-                  </a>
-                </MenuItem>
-              </MenuItems>
+              {user ? (
+                <MenuItems className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-gray-800 py-1 outline outline-1 -outline-offset-1 outline-white/10 transition data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in">
+                  <MenuItem>
+                    <a
+                      href="#"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/20 hover:text-white"
+                    >
+                      Tu perfil
+                    </a>
+                  </MenuItem>
+                  <MenuItem>
+                    <a
+                      href="#"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/20 hover:text-white"
+                    >
+                      Ajustes
+                    </a>
+                  </MenuItem>
+                  <MenuItem>
+                    <LogoutButton />
+                  </MenuItem>
+                </MenuItems>
+              ) : (
+                <MenuItems className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-gray-800 py-1 outline outline-1 -outline-offset-1 outline-white/10 transition data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in">
+                  <MenuItem>
+                    <a
+                      href="/login"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/20 hover:text-white"
+                    >
+                      Iniciar Sesión
+                    </a>
+                  </MenuItem>
+                  <MenuItem>
+                    <a
+                      href="/register"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-white/20 hover:text-white"
+                    >
+                      Registrarse
+                    </a>
+                  </MenuItem>
+                </MenuItems>
+              )}
             </Menu>
           </div>
         </div>

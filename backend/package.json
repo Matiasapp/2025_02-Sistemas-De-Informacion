@@ -22,7 +22,11 @@
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "mysql2": "^3.15.1"
+    "express-session": "^1.18.2",
+    "mysql2": "^3.15.1",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0",
+    "react-router-dom": "^7.9.4"
   },
   "devDependencies": {
     "dotenv": "^17.2.3",

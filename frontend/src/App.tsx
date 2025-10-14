@@ -5,6 +5,7 @@ import { Mujer } from "./pages/Mujer";
 import { Accesorios } from "./pages/Accesorios";
 import { Nav } from "./components/Nav";
 import { Register } from "./pages/Registerpage";
+import { Login } from "./pages/Login";
 function App() {
   return (
     <>
@@ -15,6 +16,7 @@ function App() {
         <Route path="/mujer" element={<Mujer />} />
         <Route path="/accesorios" element={<Accesorios />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
       </Routes>
     </>
   );

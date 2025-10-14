@@ -1,9 +1,15 @@
+import dotenv from "dotenv";
+
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config();
+}
+
 import { createPool } from "mysql2/promise";
 
 export const pool = createPool({
   host: "localhost",
   user: "root",
-  password: "passwordmati",
+  password: process.env.DB_PASSWORD,
   port: 3306,
   database: "bd_ventaropa",
 });
