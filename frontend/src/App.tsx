@@ -6,6 +6,8 @@ import { Accesorios } from "./pages/Accesorios";
 import { Nav } from "./components/Nav";
 import { Register } from "./pages/Registerpage";
 import { Login } from "./pages/Login";
+import { AddProduct } from "./pages/Addproduct";
+import { AdminPanel } from "./pages/Controlpanel";
 function App() {
   return (
     <>
@@ -17,6 +19,8 @@ function App() {
         <Route path="/accesorios" element={<Accesorios />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/add-product" element={<AddProduct />} />
+        <Route path="/control-panel" element={<AdminPanel />} />
       </Routes>
     </>
   );

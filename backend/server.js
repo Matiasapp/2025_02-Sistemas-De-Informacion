@@ -13,6 +13,8 @@ import passport from "passport";
 import session from "express-session";
 import "./passport-config.js";
 import initializePassport from "./passport-config.js";
+import multer from "multer";
+import * as ControladorProducto from "./ControladorProducto.js";
 
 initializePassport(
   passport,
@@ -29,6 +31,17 @@ initializePassport(
     return rows[0];
   }
 );
+
+// Configuración de multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "../frontend/public/uploads/"),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,6 +69,13 @@ app.use(
 app.use(express.urlencoded({ extended: false }));
 
 app.post("/register", checkNotAuthenticated, registerUser);
+
+app.post(
+  "/add-product",
+  upload.any(),
+  ControladorProducto.addProductController
+);
+app.use("/uploads", express.static("uploads"));
 
 app.post("/login", checkNotAuthenticated, (req, res, next) => {
   passport.authenticate("local", (err, user, info) => {
@@ -110,6 +130,29 @@ app.get("/auth/me", (req, res) => {
   } else {
     res.status(401).json({ user: null });
   }
+});
+
+app.get("/categories", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT * FROM categories");
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener categorías" });
+  }
+});
+
+app.get("/brands", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT * FROM brands");
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener marcas" });
+  }
+});
+
+app.get("/colors", async (req, res) => {
+  const [rows] = await pool.query("SELECT * FROM colors");
+  res.json(rows);
 });
 
 const PORT = 3000;
