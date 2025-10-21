@@ -16,6 +16,8 @@ const navigation = [
   { name: "Hombre", href: "/Hombre", current: false },
   { name: "Mujer", href: "/Mujer", current: false },
   { name: "Accesorios", href: "/accesorios", current: false },
+  { name: "Añadir Producto", href: "/add-product", current: false },
+  { name: "Modificar Producto", href: "/modify-product", current: false },
 ];
 
 function classNames(...classes: string[]) {

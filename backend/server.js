@@ -14,7 +14,8 @@ import session from "express-session";
 import "./passport-config.js";
 import initializePassport from "./passport-config.js";
 import multer from "multer";
-import * as ControladorProducto from "./ControladorProducto.js";
+import * as ControladorProducto from "./ControladorAddProducto.js";
+import { updateProduct, updateVariant } from "./ControladorModifyProducts.js";
 
 initializePassport(
   passport,
@@ -131,13 +132,57 @@ app.get("/auth/me", (req, res) => {
     res.status(401).json({ user: null });
   }
 });
+app.get("/products/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [productRows] = await pool.query(
+      "SELECT * FROM products WHERE product_id = ?",
+      [id]
+    );
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener el producto" });
+  }
+});
+app.get("/sizes/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [productRows] = await pool.query(
+      "SELECT * FROM product_variants WHERE size = ?",
+      [id]
+    );
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener la talla" });
+  }
+});
+app.get("/sizes/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [productRows] = await pool.query(
+      "SELECT * FROM product_variants WHERE size = ?",
+      [id]
+    );
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener la talla" });
+  }
+});
 
+app.put("/products/:id", updateProduct);
+app.put("/variants/:variant_id", updateVariant);
 app.get("/categories", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM categories");
     res.json(rows);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener categorías" });
+  }
+});
+
+app.get("/products", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT * FROM products");
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener productos" });
   }
 });
 

@@ -8,6 +8,8 @@ import { Register } from "./pages/Registerpage";
 import { Login } from "./pages/Login";
 import { AddProduct } from "./pages/Addproduct";
 import { AdminPanel } from "./pages/Controlpanel";
+import { ModifyProduct } from "./pages/ModifyProductPage";
+import { MostrarProducto } from "./pages/ShowProductPage";
 function App() {
   return (
     <>
@@ -21,6 +23,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/add-product" element={<AddProduct />} />
         <Route path="/control-panel" element={<AdminPanel />} />
+        <Route path="/modify-product" element={<ModifyProduct />} />
+        <Route path="/product" element={<MostrarProducto />} />
       </Routes>
     </>
   );
