@@ -1,4 +1,20 @@
 import { useState, useEffect } from "react";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+// 🔹 Tipos principales
+type Image = {
+  url: string;
+};
+
+type Variant = {
+  variant_id: number;
+  color_ID: number;
+  size: string;
+  price: number;
+  stock: number;
+  sku: string;
+  images: Image[]; // 🔹 Agregado
+};
 
 type Product = {
   product_ID: number;
@@ -7,15 +23,6 @@ type Product = {
   category_ID: number;
   brand_id: number;
   variants: Variant[];
-};
-
-type Variant = {
-  variant_ID: number;
-  color_ID: number;
-  size_ID: number;
-  price: number;
-  stock: number;
-  sku: string;
 };
 
 type Category = { category_ID: number; name: string };
@@ -30,16 +37,16 @@ export default function AdminProductPanel() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Traer datos
+  // 🔹 Cargar datos iniciales
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [productsRes, categoriesRes, brandsRes, colorsRes] =
           await Promise.all([
-            fetch("http://localhost:3000/products"),
-            fetch("http://localhost:3000/categories"),
-            fetch("http://localhost:3000/brands"),
-            fetch("http://localhost:3000/colors"),
+            fetch(`${backendUrl}/products`),
+            fetch(`${backendUrl}/categories`),
+            fetch(`${backendUrl}/brands`),
+            fetch(`${backendUrl}/colors`),
           ]);
 
         setProducts(await productsRes.json());
@@ -55,36 +62,81 @@ export default function AdminProductPanel() {
     fetchData();
   }, []);
 
-  // 🔹 Cargar producto en modal
+  // 🔹 Cargar detalles del producto (incluye variantes e imágenes)
   const loadProductDetails = async (product_ID: number) => {
     try {
-      const res = await fetch(`http://localhost:3000/products/${product_ID}`);
+      const res = await fetch(`${backendUrl}/products/${product_ID}`);
       if (!res.ok) throw new Error("Producto no encontrado");
       const data = await res.json();
-      setSelectedProduct(data);
+
+      // Asegurar que cada variante tenga array de imágenes
+      const formatted = {
+        ...data,
+        variants: data.variants.map((v: any) => ({
+          ...v,
+          images: v.images || [],
+        })),
+      };
+
+      setSelectedProduct(formatted);
     } catch (err) {
       console.error("Error al cargar producto:", err);
       alert("Error al cargar el producto");
     }
   };
 
-  // 🔹 Guardar cambios (ejemplo simple)
+  // 🔹 Guardar cambios en producto y variantes
   const handleSave = async () => {
     if (!selectedProduct) return;
+
     try {
-      const res = await fetch(
-        `http://localhost:3000/products/${selectedProduct.product_ID}`,
-        {
+      // 1️⃣ Actualizar datos del producto
+      await fetch(`${backendUrl}/products/${selectedProduct.product_ID}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: selectedProduct.name,
+          description: selectedProduct.description,
+          category_ID: Number(selectedProduct.category_ID),
+          brand_id: Number(selectedProduct.brand_id),
+        }),
+      });
+
+      // 2️⃣ Actualizar cada variante
+      for (const v of selectedProduct.variants) {
+        await fetch(`${backendUrl}/variants/${v.variant_id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(selectedProduct),
+          body: JSON.stringify({
+            color_ID: Number(v.color_ID),
+            size: v.size,
+            price: Number(v.price),
+            stock: Number(v.stock),
+            sku: v.sku,
+          }),
+        });
+
+        // 3️⃣ Subir imágenes (solo si las agregaste)
+        for (const img of v.images) {
+          if (img.url.startsWith("blob:")) {
+            const formData = new FormData();
+            const file = await fetch(img.url).then((r) => r.blob());
+            formData.append("image", file);
+            formData.append("variant_id", String(v.variant_id));
+
+            await fetch(`${backendUrl}/variant-images`, {
+              method: "POST",
+              body: formData,
+            });
+          }
         }
-      );
-      if (!res.ok) throw new Error("Error al actualizar producto");
-      alert("Producto actualizado");
+      }
+
+      alert("Producto y variantes actualizados correctamente ");
       setSelectedProduct(null);
-      // 🔹 Refrescar lista
-      const refreshed = await fetch("http://localhost:3000/products");
+
+      // 🔄 Refrescar lista
+      const refreshed = await fetch(`${backendUrl}/products`);
       setProducts(await refreshed.json());
     } catch (err) {
       console.error(err);
@@ -115,11 +167,11 @@ export default function AdminProductPanel() {
               <td className="px-4 py-2">{p.name}</td>
               <td className="px-4 py-2">{p.description}</td>
               <td className="px-4 py-2">
-                {categories.find((c) => c.category_ID === Number(p.category_ID))
+                {categories.find((c) => c.category_ID === p.category_ID)
                   ?.name || "Sin categoría"}
               </td>
               <td className="px-4 py-2">
-                {brands.find((b) => b.brand_id === Number(p.brand_id))?.name ||
+                {brands.find((b) => b.brand_id === p.brand_id)?.name ||
                   "Sin marca"}
               </td>
               <td className="px-4 py-2">
@@ -138,164 +190,279 @@ export default function AdminProductPanel() {
       {/* 🔹 Modal de edición */}
       {selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-3/4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded shadow-lg w-4/5 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">
               Editar: {selectedProduct.name}
             </h2>
 
-            {/* 🔹 Formulario básico de producto */}
-            <div className="mb-4">
-              <label className="block font-semibold">Nombre</label>
-              <input
-                type="text"
-                className="border p-2 w-full"
-                value={selectedProduct.name}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    name: e.target.value,
-                  })
-                }
-              />
+            {/* Producto */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label>Nombre</label>
+                <input
+                  type="text"
+                  className="border p-2 w-full"
+                  value={selectedProduct.name}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      name: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label>Descripción</label>
+                <textarea
+                  className="border p-2 w-full"
+                  value={selectedProduct.description}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      description: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label>Categoría</label>
+                <select
+                  value={selectedProduct.category_ID}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      category_ID: Number(e.target.value),
+                    })
+                  }
+                  className="border p-2 w-full"
+                >
+                  {categories.map((c) => (
+                    <option key={c.category_ID} value={c.category_ID}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label>Marca</label>
+                <select
+                  value={selectedProduct.brand_id}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      brand_id: Number(e.target.value),
+                    })
+                  }
+                  className="border p-2 w-full"
+                >
+                  {brands.map((b) => (
+                    <option key={b.brand_id} value={b.brand_id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="mb-4">
-              <label className="block font-semibold">Descripción</label>
-              <textarea
-                className="border p-2 w-full"
-                value={selectedProduct.description}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    description: e.target.value,
-                  })
-                }
-              />
-            </div>
+            {/* Variantes */}
+            <h3 className="text-lg font-bold mb-2">Variantes</h3>
 
-            <div className="mb-4">
-              <label className="block font-semibold">Categoría</label>
-              <select
-                className="border p-2 w-full"
-                value={selectedProduct.category_ID}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    category_ID: Number(e.target.value),
-                  })
-                }
-              >
-                {categories.map((c) => (
-                  <option key={c.category_ID} value={c.category_ID}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-6 gap-3 items-center font-semibold text-sm mb-2">
+              <div className="px-1 text-center">Color</div>
+              <div className="px-1 text-center">Talla</div>
+              <div className="px-1 text-center">Precio</div>
+              <div className="px-1 text-center">Stock</div>
+              <div className="px-1 text-center">SKU</div>
+              <div className="px-1 text-center">Acción</div>
             </div>
+            {selectedProduct.variants.map((v, i) => (
+              <div key={v.variant_id} className="mb-4 border p-2 rounded">
+                <div className="grid grid-cols-6 gap-2 items-center">
+                  {/* Color */}
+                  <select
+                    value={v.color_ID}
+                    className="p-1 border text-center"
+                    onChange={(e) => {
+                      const updated = [...selectedProduct.variants];
+                      updated[i].color_ID = Number(e.target.value);
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        variants: updated,
+                      });
+                    }}
+                  >
+                    {colors.map((c) => (
+                      <option key={c.color_ID} value={c.color_ID}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
 
-            <div className="mb-4">
-              <label className="block font-semibold">Marca</label>
-              <select
-                className="border p-2 w-full"
-                value={selectedProduct.brand_id}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    brand_id: Number(e.target.value),
-                  })
-                }
-              >
-                {brands.map((b) => (
-                  <option key={b.brand_id} value={b.brand_id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                  {/* Talla */}
+                  <input
+                    type="text"
+                    value={v.size}
+                    className="border p-1 text-center"
+                    onChange={(e) => {
+                      const updated = [...selectedProduct.variants];
+                      updated[i].size = e.target.value;
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        variants: updated,
+                      });
+                    }}
+                  />
 
-            {/* 🔹 Variantes */}
-            <h3 className="text-lg font-bold mt-6 mb-2">Variantes</h3>
-            <table className="min-w-full border mb-4">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-2 py-1">Color</th>
-                  <th className="px-2 py-1">Talla</th>
-                  <th className="px-2 py-1">Precio</th>
-                  <th className="px-2 py-1">Stock</th>
-                  <th className="px-2 py-1">SKU</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedProduct.variants.map((v, i) => (
-                  <tr key={v.variant_ID} className="border-b">
-                    <td className="px-2 py-1">
-                      <select
-                        value={v.color_ID}
-                        onChange={(e) => {
+                  {/* Precio */}
+                  <input
+                    type="number"
+                    value={v.price}
+                    className="border p-1 text-center"
+                    onChange={(e) => {
+                      const updated = [...selectedProduct.variants];
+                      updated[i].price = Number(e.target.value);
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        variants: updated,
+                      });
+                    }}
+                  />
+
+                  {/* Stock */}
+                  <input
+                    type="number"
+                    value={v.stock}
+                    className="border p-1 text-center"
+                    onChange={(e) => {
+                      const updated = [...selectedProduct.variants];
+                      updated[i].stock = Number(e.target.value);
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        variants: updated,
+                      });
+                    }}
+                  />
+
+                  {/* SKU */}
+                  <input
+                    type="text"
+                    value={v.sku}
+                    className="border p-1 text-center"
+                    onChange={(e) => {
+                      const updated = [...selectedProduct.variants];
+                      updated[i].sku = e.target.value;
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        variants: updated,
+                      });
+                    }}
+                  />
+
+                  {/* Eliminar variante */}
+                  <button
+                    className="bg-red-500 text-white px-2 py-1 rounded"
+                    onClick={() => {
+                      const updated = selectedProduct.variants.filter(
+                        (_, idx) => idx !== i
+                      );
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        variants: updated,
+                      });
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+
+                {/* Imágenes */}
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {v.images?.map((img, idx) => (
+                    <div key={idx} className="relative">
+                      <img
+                        src={img.url}
+                        className="w-20 h-20 object-cover rounded"
+                      />
+                      <button
+                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 text-xs"
+                        onClick={() => {
+                          const updatedImages = v.images.filter(
+                            (_, j) => j !== idx
+                          );
                           const updatedVariants = [...selectedProduct.variants];
-                          updatedVariants[i].color_ID = Number(e.target.value);
+                          updatedVariants[i].images = updatedImages;
                           setSelectedProduct({
                             ...selectedProduct,
                             variants: updatedVariants,
                           });
                         }}
                       >
-                        {colors.map((c) => (
-                          <option key={c.color_ID} value={c.color_ID}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-2 py-1">{v.size_ID}</td>
-                    <td className="px-2 py-1">
-                      <input
-                        type="number"
-                        value={v.price}
-                        onChange={(e) => {
-                          const updatedVariants = [...selectedProduct.variants];
-                          updatedVariants[i].price = Number(e.target.value);
-                          setSelectedProduct({
-                            ...selectedProduct,
-                            variants: updatedVariants,
-                          });
-                        }}
-                      />
-                    </td>
-                    <td className="px-2 py-1">
-                      <input
-                        type="number"
-                        value={v.stock}
-                        onChange={(e) => {
-                          const updatedVariants = [...selectedProduct.variants];
-                          updatedVariants[i].stock = Number(e.target.value);
-                          setSelectedProduct({
-                            ...selectedProduct,
-                            variants: updatedVariants,
-                          });
-                        }}
-                      />
-                    </td>
-                    <td className="px-2 py-1">{v.sku}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        x
+                      </button>
+                    </div>
+                  ))}
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (!e.target.files) return;
+                      const filesArray = Array.from(e.target.files);
+                      const uploadedImages = filesArray.map((file) => ({
+                        url: URL.createObjectURL(file),
+                      }));
+                      const updatedVariants = [...selectedProduct.variants];
+                      updatedVariants[i].images = [
+                        ...(updatedVariants[i].images || []),
+                        ...uploadedImages,
+                      ];
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        variants: updatedVariants,
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
 
-            {/* 🔹 Botones */}
-            <div className="flex justify-end gap-2">
+            {/* Botones */}
+            <div className="flex justify-between items-center mt-4">
               <button
-                onClick={() => setSelectedProduct(null)}
-                className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded"
+                className="bg-blue-500 text-white px-4 py-2 rounded"
+                onClick={() => {
+                  const newVariant: Variant = {
+                    variant_id: Date.now(),
+                    color_ID: colors[0]?.color_ID || 1,
+                    size: "",
+                    price: 0,
+                    stock: 0,
+                    sku: "",
+                    images: [],
+                  };
+                  setSelectedProduct({
+                    ...selectedProduct,
+                    variants: [...selectedProduct.variants, newVariant],
+                  });
+                }}
               >
-                Cerrar
+                + Agregar Variante
               </button>
-              <button
-                onClick={handleSave}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
-              >
-                Guardar
-              </button>
+
+              <div className="flex gap-2">
+                <button
+                  className="bg-gray-300 px-4 py-2 rounded"
+                  onClick={() => setSelectedProduct(null)}
+                >
+                  Cerrar
+                </button>
+                <button
+                  className="bg-green-500 text-white px-4 py-2 rounded"
+                  onClick={async () => await handleSave()}
+                >
+                  Guardar
+                </button>
+              </div>
             </div>
           </div>
         </div>

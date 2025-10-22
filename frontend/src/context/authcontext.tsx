@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 interface AuthContextType {
   user: any;
@@ -12,7 +13,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    fetch("http://localhost:3000/auth/me", { credentials: "include" })
+    fetch(`${backendUrl}/auth/me`, { credentials: "include" })
       .then((res) => {
         if (!res.ok) return null;
         return res.json();

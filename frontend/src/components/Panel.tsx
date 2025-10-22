@@ -3,26 +3,26 @@ import { useNavigate } from "react-router-dom";
 export default function AdminPanelForm() {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen space-y-4 flex flex-col justify-center items-center bg-gray-100">
+    <div className="min-h-96 space-y-5 flex flex-col justify-center items-center bg-gray-100">
       <h1 className="text-4xl font-bold text-gray-800 mb-8">
         Panel de control
       </h1>
 
       <button
         onClick={() => navigate("/add-product")}
-        className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold px-8 py-4 rounded-full shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-blue-300"
+        className="bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600"
       >
         Añadir producto
       </button>
       <button
-        onClick={() => navigate("/add-product")}
-        className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold px-8 py-4 rounded-full shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-blue-300"
+        onClick={() => navigate("/modify-product")}
+        className="bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600"
       >
         Modificar producto y Variantes
       </button>
       <button
         onClick={() => navigate("/add-product")}
-        className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold px-8 py-4 rounded-full shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-blue-300"
+        className="bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600"
       >
         Administrar usuarios
       </button>

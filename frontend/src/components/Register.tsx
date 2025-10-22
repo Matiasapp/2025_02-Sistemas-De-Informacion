@@ -1,4 +1,5 @@
 import { useState } from "react";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 function RegisterForm() {
   const [form, setForm] = useState({
@@ -18,7 +19,7 @@ function RegisterForm() {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:3000/register", {
+      const response = await fetch(`${backendUrl}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

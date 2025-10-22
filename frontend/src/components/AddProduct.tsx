@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 type Variant = {
   color_ID: number;
@@ -29,13 +30,13 @@ function AddProductForm() {
   const [existingImages, setExistingImages] = useState<ExistingImages[]>([]);
 
   useEffect(() => {
-    fetch("http://localhost:3000/categories").then((res) =>
+    fetch(`${backendUrl}/categories`).then((res) =>
       res.json().then(setCategories).catch(console.error)
     );
-    fetch("http://localhost:3000/colors").then((res) =>
+    fetch(`${backendUrl}/colors`).then((res) =>
       res.json().then(setColors).catch(console.error)
     );
-    fetch("http://localhost:3000/brands").then((res) =>
+    fetch(`${backendUrl}/brands`).then((res) =>
       res.json().then(setBrands).catch(console.error)
     );
   }, []);
@@ -106,7 +107,7 @@ function AddProductForm() {
     });
 
     try {
-      const res = await fetch("http://localhost:3000/add-product", {
+      const res = await fetch(`${backendUrl}/add-product`, {
         method: "POST",
         body: formData,
       });

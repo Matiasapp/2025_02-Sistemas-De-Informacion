@@ -1,5 +1,6 @@
 import { useAuth } from "../context/authcontext";
 import { useNavigate } from "react-router-dom";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 export default function LogoutButton() {
   const { setUser } = useAuth();
@@ -7,7 +8,7 @@ export default function LogoutButton() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("http://localhost:3000/logout", {
+      const response = await fetch(`${backendUrl}/logout`, {
         method: "POST",
         credentials: "include",
       });

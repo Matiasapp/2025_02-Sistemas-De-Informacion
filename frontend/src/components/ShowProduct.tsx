@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 type Product = {
   product_ID: number;
@@ -15,7 +16,7 @@ function ProductPage() {
 
   useEffect(() => {
     if (id) {
-      fetch(`http://localhost:3000/product/${id}`)
+      fetch(`${backendUrl}/product/${id}`)
         .then((res) => res.json())
         .then((data) => setProduct(data))
         .catch((err) => console.error(err));

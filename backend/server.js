@@ -62,7 +62,7 @@ app.use(passport.session());
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 );
@@ -133,16 +133,34 @@ app.get("/auth/me", (req, res) => {
   }
 });
 app.get("/products/:id", async (req, res) => {
-  const { id } = req.params;
+  const product_ID = Number(req.params.id);
   try {
     const [productRows] = await pool.query(
-      "SELECT * FROM products WHERE product_id = ?",
-      [id]
+      "SELECT * FROM products WHERE product_ID = ?",
+      [product_ID]
     );
-  } catch (error) {
-    res.status(500).json({ message: "Error al obtener el producto" });
+
+    if (productRows.length === 0)
+      return res.status(404).json({ message: "No encontrado" });
+
+    const product = productRows[0];
+
+    // Traer variantes
+    const [variantRows] = await pool.query(
+      "SELECT * FROM product_variants WHERE product_ID = ?",
+      [product_ID]
+    );
+
+    res.json({
+      ...product,
+      variants: variantRows || [],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error interno" });
   }
 });
+
 app.get("/sizes/:id", async (req, res) => {
   const { id } = req.params;
   try {
@@ -167,7 +185,9 @@ app.get("/sizes/:id", async (req, res) => {
 });
 
 app.put("/products/:id", updateProduct);
+
 app.put("/variants/:variant_id", updateVariant);
+
 app.get("/categories", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM categories");

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/authcontext";
 import { useNavigate } from "react-router-dom";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 function LoginForm() {
   const { setUser } = useAuth();
@@ -18,7 +19,7 @@ function LoginForm() {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:3000/login", {
+      const response = await fetch(`${backendUrl}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
