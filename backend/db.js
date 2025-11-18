@@ -7,18 +7,18 @@ if (process.env.NODE_ENV !== "production") {
 import { createPool } from "mysql2/promise";
 
 export const pool = createPool({
-  host: "localhost",
-  user: "root",
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  port: 3306,
-  database: "bd_ventaropa",
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
 });
 (async () => {
   try {
     const connection = await pool.getConnection();
-    console.log("✅ Conectado correctamente a la base de datos");
     connection.release();
+    console.log("Conexión a la base de datos MySQL exitosa.");
   } catch (error) {
-    console.error("❌ Error al conectar con la base de datos:", error.message);
+    // Error de conexión
   }
 })();

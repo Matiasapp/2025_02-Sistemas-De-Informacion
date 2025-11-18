@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { useAuth } from "../context/authcontext";
-import { useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext";
+import { useNavigate, Link } from "react-router-dom";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 function LoginForm() {
-  const { setUser } = useAuth();
+  const { setUser, refreshUser } = useAuth();
+  const { syncCartOnLogin } = useCart();
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -17,6 +17,7 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
       const response = await fetch(`${backendUrl}/login`, {
@@ -27,14 +28,35 @@ function LoginForm() {
       });
 
       const data = await response.json();
-      alert(data.message || "Inicio de sesión exitoso");
+
       if (response.ok) {
+        // 1. Actualizar usuario inmediatamente
         setUser(data.user);
-        navigate("/");
+
+        // 2. Esperar a que se refresque el usuario desde el backend
+        await refreshUser();
+
+        // 3. Sincronizar carrito del localStorage con la base de datos
+        await syncCartOnLogin();
+
+        // 4. Mostrar mensaje de éxito
+        alert(data.message || "Inicio de sesión exitoso");
+
+        // 5. Verificar si hay una redirección guardada
+        const redirectPath = localStorage.getItem("redirectAfterLogin");
+        if (redirectPath) {
+          localStorage.removeItem("redirectAfterLogin");
+          navigate(redirectPath);
+        } else {
+          navigate("/");
+        }
+      } else {
+        alert(data.message || "Credenciales inválidas");
       }
     } catch (err) {
-      console.error(err);
-      alert("Error al logear usuario");
+      alert("Error al iniciar sesión");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -62,12 +84,23 @@ function LoginForm() {
         className="w-full border p-2 mb-4 rounded"
         required
       />
+
       <button
         type="submit"
-        className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+        disabled={isLoading}
+        className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed"
       >
-        Iniciar Sesión
+        {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
       </button>
+
+      <div className="mt-4 text-center">
+        <Link
+          to="/forgot-password"
+          className="text-blue-600 hover:text-blue-700 text-sm hover:underline"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </div>
     </form>
   );
 }

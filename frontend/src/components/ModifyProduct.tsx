@@ -1,472 +1,365 @@
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
+import { useProductContext, ProductProvider } from "../context/ProductContext";
+import { ProductModal } from "./ModifyProductModal";
 
-// 🔹 Tipos principales
-type Image = {
-  url: string;
-};
+const ModifyProductInner: React.FC = () => {
+  const { products, loading, selectProduct, categories, brands, suppliers } =
+    useProductContext();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-type Variant = {
-  variant_id: number;
-  color_ID: number;
-  size: string;
-  price: number;
-  stock: number;
-  sku: string;
-  images: Image[]; // 🔹 Agregado
-};
+  // Estados de búsqueda y filtros
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState<number | "">("");
+  const [filterBrand, setFilterBrand] = useState<number | "">("");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "active" | "inactive"
+  >("all");
 
-type Product = {
-  product_ID: number;
-  name: string;
-  description: string;
-  category_ID: number;
-  brand_id: number;
-  variants: Variant[];
-};
-
-type Category = { category_ID: number; name: string };
-type Brand = { brand_id: number; name: string };
-type Color = { color_ID: number; name: string };
-
-export default function AdminProductPanel() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [colors, setColors] = useState<Color[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // 🔹 Cargar datos iniciales
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [productsRes, categoriesRes, brandsRes, colorsRes] =
-          await Promise.all([
-            fetch(`${backendUrl}/products`),
-            fetch(`${backendUrl}/categories`),
-            fetch(`${backendUrl}/brands`),
-            fetch(`${backendUrl}/colors`),
-          ]);
-
-        setProducts(await productsRes.json());
-        setCategories(await categoriesRes.json());
-        setBrands(await brandsRes.json());
-        setColors(await colorsRes.json());
-        setLoading(false);
-      } catch (err) {
-        console.error("Error al cargar datos:", err);
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  // 🔹 Cargar detalles del producto (incluye variantes e imágenes)
-  const loadProductDetails = async (product_ID: number) => {
-    try {
-      const res = await fetch(`${backendUrl}/products/${product_ID}`);
-      if (!res.ok) throw new Error("Producto no encontrado");
-      const data = await res.json();
-
-      // Asegurar que cada variante tenga array de imágenes
-      const formatted = {
-        ...data,
-        variants: data.variants.map((v: any) => ({
-          ...v,
-          images: v.images || [],
-        })),
-      };
-
-      setSelectedProduct(formatted);
-    } catch (err) {
-      console.error("Error al cargar producto:", err);
-      alert("Error al cargar el producto");
-    }
+  const handleEditProduct = async (productId: number) => {
+    await selectProduct(productId);
+    setIsModalOpen(true);
   };
 
-  // 🔹 Guardar cambios en producto y variantes
-  const handleSave = async () => {
-    if (!selectedProduct) return;
-
+  const handleToggleActiveProduct = async (
+    product_ID: number,
+    currentState: boolean
+  ) => {
     try {
-      // 1️⃣ Actualizar datos del producto
-      await fetch(`${backendUrl}/products/${selectedProduct.product_ID}`, {
+      const res = await fetch(`${backendUrl}/products/${product_ID}/active`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: selectedProduct.name,
-          description: selectedProduct.description,
-          category_ID: Number(selectedProduct.category_ID),
-          brand_id: Number(selectedProduct.brand_id),
-        }),
+        body: JSON.stringify({ is_active: !currentState }),
       });
 
-      // 2️⃣ Actualizar cada variante
-      for (const v of selectedProduct.variants) {
-        await fetch(`${backendUrl}/variants/${v.variant_id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            color_ID: Number(v.color_ID),
-            size: v.size,
-            price: Number(v.price),
-            stock: Number(v.stock),
-            sku: v.sku,
-          }),
-        });
+      if (!res.ok) throw new Error("Error al actualizar estado");
 
-        // 3️⃣ Subir imágenes (solo si las agregaste)
-        for (const img of v.images) {
-          if (img.url.startsWith("blob:")) {
-            const formData = new FormData();
-            const file = await fetch(img.url).then((r) => r.blob());
-            formData.append("image", file);
-            formData.append("variant_id", String(v.variant_id));
-
-            await fetch(`${backendUrl}/variant-images`, {
-              method: "POST",
-              body: formData,
-            });
-          }
-        }
-      }
-
-      alert("Producto y variantes actualizados correctamente ");
-      setSelectedProduct(null);
-
-      // 🔄 Refrescar lista
-      const refreshed = await fetch(`${backendUrl}/products`);
-      setProducts(await refreshed.json());
+      // Simple refresh to update UI
+      window.location.reload();
     } catch (err) {
-      console.error(err);
-      alert("Error al guardar cambios");
+      alert("No se pudo cambiar el estado del producto");
     }
   };
 
-  if (loading) return <p>Cargando...</p>;
+  const handleDeleteProduct = async (
+    productId: number,
+    productName: string
+  ) => {
+    const confirmed = window.confirm(
+      `¿Estás seguro de que deseas eliminar el producto "${productName}"?\n\nEsta acción no se puede deshacer y eliminará todas sus variantes e imágenes.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`${backendUrl}/products/${productId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Error al eliminar producto");
+
+      alert("Producto eliminado exitosamente");
+      window.location.reload();
+    } catch (err) {
+      alert("No se pudo eliminar el producto");
+    }
+  };
+
+  // Filtrar productos según búsqueda y filtros
+  const filteredProducts = products.filter((product) => {
+    // Filtro de búsqueda (nombre)
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+
+    // Filtro de categoría
+    const matchesCategory =
+      filterCategory === "" || product.category_ID === filterCategory;
+
+    // Filtro de marca
+    const matchesBrand = filterBrand === "" || product.brand_id === filterBrand;
+
+    // Filtro de estado
+    const matchesStatus =
+      filterStatus === "all" ||
+      (filterStatus === "active" && product.is_active) ||
+      (filterStatus === "inactive" && !product.is_active);
+
+    return matchesSearch && matchesCategory && matchesBrand && matchesStatus;
+  });
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setFilterCategory("");
+    setFilterBrand("");
+    setFilterStatus("all");
+  };
+
+  if (loading) return <div>Cargando productos...</div>;
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Panel Admin de Productos</h1>
+    <div className="max-w-7xl mx-auto space-y-8 pb-32">
+      {/* Header */}
+      <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+        <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight">
+          🛍️ Panel de Administración de Productos
+        </h1>
+        <p className="text-gray-500 mt-2 text-lg">
+          Gestiona y modifica los productos de tu tienda fácilmente
+        </p>
+      </div>
 
-      {/* 🔹 Tabla de productos */}
-      <table className="min-w-full border">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="px-4 py-2">Nombre</th>
-            <th className="px-4 py-2">Descripción</th>
-            <th className="px-4 py-2">Categoría</th>
-            <th className="px-4 py-2">Marca</th>
-            <th className="px-4 py-2">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((p) => (
-            <tr key={p.product_ID} className="border-b hover:bg-gray-50">
-              <td className="px-4 py-2">{p.name}</td>
-              <td className="px-4 py-2">{p.description}</td>
-              <td className="px-4 py-2">
-                {categories.find((c) => c.category_ID === p.category_ID)
-                  ?.name || "Sin categoría"}
-              </td>
-              <td className="px-4 py-2">
-                {brands.find((b) => b.brand_id === p.brand_id)?.name ||
-                  "Sin marca"}
-              </td>
-              <td className="px-4 py-2">
-                <button
-                  onClick={() => loadProductDetails(p.product_ID)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
-                >
-                  Editar
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* Barra de búsqueda y filtros */}
+      <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Búsqueda */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              🔍 Buscar producto
+            </label>
+            <input
+              type="text"
+              placeholder="Buscar por nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
 
-      {/* 🔹 Modal de edición */}
-      {selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-4/5 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">
-              Editar: {selectedProduct.name}
-            </h2>
+          {/* Filtro de categoría */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              📂 Categoría
+            </label>
+            <select
+              value={filterCategory}
+              onChange={(e) =>
+                setFilterCategory(
+                  e.target.value === "" ? "" : Number(e.target.value)
+                )
+              }
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Todas</option>
+              {categories.map((cat) => (
+                <option key={cat.category_ID} value={cat.category_ID}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            {/* Producto */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label>Nombre</label>
-                <input
-                  type="text"
-                  className="border p-2 w-full"
-                  value={selectedProduct.name}
-                  onChange={(e) =>
-                    setSelectedProduct({
-                      ...selectedProduct,
-                      name: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label>Descripción</label>
-                <textarea
-                  className="border p-2 w-full"
-                  value={selectedProduct.description}
-                  onChange={(e) =>
-                    setSelectedProduct({
-                      ...selectedProduct,
-                      description: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label>Categoría</label>
-                <select
-                  value={selectedProduct.category_ID}
-                  onChange={(e) =>
-                    setSelectedProduct({
-                      ...selectedProduct,
-                      category_ID: Number(e.target.value),
-                    })
-                  }
-                  className="border p-2 w-full"
-                >
-                  {categories.map((c) => (
-                    <option key={c.category_ID} value={c.category_ID}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label>Marca</label>
-                <select
-                  value={selectedProduct.brand_id}
-                  onChange={(e) =>
-                    setSelectedProduct({
-                      ...selectedProduct,
-                      brand_id: Number(e.target.value),
-                    })
-                  }
-                  className="border p-2 w-full"
-                >
-                  {brands.map((b) => (
-                    <option key={b.brand_id} value={b.brand_id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Variantes */}
-            <h3 className="text-lg font-bold mb-2">Variantes</h3>
-
-            <div className="grid grid-cols-6 gap-3 items-center font-semibold text-sm mb-2">
-              <div className="px-1 text-center">Color</div>
-              <div className="px-1 text-center">Talla</div>
-              <div className="px-1 text-center">Precio</div>
-              <div className="px-1 text-center">Stock</div>
-              <div className="px-1 text-center">SKU</div>
-              <div className="px-1 text-center">Acción</div>
-            </div>
-            {selectedProduct.variants.map((v, i) => (
-              <div key={v.variant_id} className="mb-4 border p-2 rounded">
-                <div className="grid grid-cols-6 gap-2 items-center">
-                  {/* Color */}
-                  <select
-                    value={v.color_ID}
-                    className="p-1 border text-center"
-                    onChange={(e) => {
-                      const updated = [...selectedProduct.variants];
-                      updated[i].color_ID = Number(e.target.value);
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        variants: updated,
-                      });
-                    }}
-                  >
-                    {colors.map((c) => (
-                      <option key={c.color_ID} value={c.color_ID}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Talla */}
-                  <input
-                    type="text"
-                    value={v.size}
-                    className="border p-1 text-center"
-                    onChange={(e) => {
-                      const updated = [...selectedProduct.variants];
-                      updated[i].size = e.target.value;
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        variants: updated,
-                      });
-                    }}
-                  />
-
-                  {/* Precio */}
-                  <input
-                    type="number"
-                    value={v.price}
-                    className="border p-1 text-center"
-                    onChange={(e) => {
-                      const updated = [...selectedProduct.variants];
-                      updated[i].price = Number(e.target.value);
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        variants: updated,
-                      });
-                    }}
-                  />
-
-                  {/* Stock */}
-                  <input
-                    type="number"
-                    value={v.stock}
-                    className="border p-1 text-center"
-                    onChange={(e) => {
-                      const updated = [...selectedProduct.variants];
-                      updated[i].stock = Number(e.target.value);
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        variants: updated,
-                      });
-                    }}
-                  />
-
-                  {/* SKU */}
-                  <input
-                    type="text"
-                    value={v.sku}
-                    className="border p-1 text-center"
-                    onChange={(e) => {
-                      const updated = [...selectedProduct.variants];
-                      updated[i].sku = e.target.value;
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        variants: updated,
-                      });
-                    }}
-                  />
-
-                  {/* Eliminar variante */}
-                  <button
-                    className="bg-red-500 text-white px-2 py-1 rounded"
-                    onClick={() => {
-                      const updated = selectedProduct.variants.filter(
-                        (_, idx) => idx !== i
-                      );
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        variants: updated,
-                      });
-                    }}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-
-                {/* Imágenes */}
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {v.images?.map((img, idx) => (
-                    <div key={idx} className="relative">
-                      <img
-                        src={img.url}
-                        className="w-20 h-20 object-cover rounded"
-                      />
-                      <button
-                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 text-xs"
-                        onClick={() => {
-                          const updatedImages = v.images.filter(
-                            (_, j) => j !== idx
-                          );
-                          const updatedVariants = [...selectedProduct.variants];
-                          updatedVariants[i].images = updatedImages;
-                          setSelectedProduct({
-                            ...selectedProduct,
-                            variants: updatedVariants,
-                          });
-                        }}
-                      >
-                        x
-                      </button>
-                    </div>
-                  ))}
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => {
-                      if (!e.target.files) return;
-                      const filesArray = Array.from(e.target.files);
-                      const uploadedImages = filesArray.map((file) => ({
-                        url: URL.createObjectURL(file),
-                      }));
-                      const updatedVariants = [...selectedProduct.variants];
-                      updatedVariants[i].images = [
-                        ...(updatedVariants[i].images || []),
-                        ...uploadedImages,
-                      ];
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        variants: updatedVariants,
-                      });
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-
-            {/* Botones */}
-            <div className="flex justify-between items-center mt-4">
-              <button
-                className="bg-blue-500 text-white px-4 py-2 rounded"
-                onClick={() => {
-                  const newVariant: Variant = {
-                    variant_id: Date.now(),
-                    color_ID: colors[0]?.color_ID || 1,
-                    size: "",
-                    price: 0,
-                    stock: 0,
-                    sku: "",
-                    images: [],
-                  };
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    variants: [...selectedProduct.variants, newVariant],
-                  });
-                }}
-              >
-                + Agregar Variante
-              </button>
-
-              <div className="flex gap-2">
-                <button
-                  className="bg-gray-300 px-4 py-2 rounded"
-                  onClick={() => setSelectedProduct(null)}
-                >
-                  Cerrar
-                </button>
-                <button
-                  className="bg-green-500 text-white px-4 py-2 rounded"
-                  onClick={async () => await handleSave()}
-                >
-                  Guardar
-                </button>
-              </div>
-            </div>
+          {/* Filtro de marca */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              🏷️ Marca
+            </label>
+            <select
+              value={filterBrand}
+              onChange={(e) =>
+                setFilterBrand(
+                  e.target.value === "" ? "" : Number(e.target.value)
+                )
+              }
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Todas</option>
+              {brands.map((brand) => (
+                <option key={brand.brand_id} value={brand.brand_id}>
+                  {brand.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-      )}
+
+        {/* Segunda fila de filtros */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+          {/* Filtro de estado */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ⚡ Estado
+            </label>
+            <select
+              value={filterStatus}
+              onChange={(e) =>
+                setFilterStatus(e.target.value as "all" | "active" | "inactive")
+              }
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">Todos</option>
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+            </select>
+          </div>
+
+          {/* Botón limpiar filtros */}
+          <div className="flex items-end">
+            <button
+              onClick={clearFilters}
+              className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+            >
+              🔄 Limpiar filtros
+            </button>
+          </div>
+
+          {/* Contador de resultados */}
+          <div className="md:col-span-2 flex items-end justify-end">
+            <p className="text-sm text-gray-600">
+              Mostrando{" "}
+              <span className="font-semibold">{filteredProducts.length}</span>{" "}
+              de <span className="font-semibold">{products.length}</span>{" "}
+              productos
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Products Table */}
+      <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className=" bg-blue-100">
+              <tr>
+                {[
+                  "Producto",
+                  "Categoría",
+                  "Marca",
+                  "Variantes",
+                  "Proveedor",
+                  "Estado",
+                  "Acciones",
+                ].map((title) => (
+                  <th
+                    key={title}
+                    className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  >
+                    {title}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    No se encontraron productos con los filtros seleccionados
+                  </td>
+                </tr>
+              ) : (
+                filteredProducts.map((product) => (
+                  <tr key={product.product_ID}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {product.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      {categories.find(
+                        (c) => c.category_ID === product.category_ID
+                      )
+                        ? categories.find(
+                            (c) => c.category_ID === product.category_ID
+                          )!.name
+                        : "Sin categoría"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      {brands.find((b) => b.brand_id === product.brand_id)
+                        ?.name || product.brand_id}
+                    </td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap text-sm text-gray-700">
+                      {product.variants?.length || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                      {suppliers.find(
+                        (s) => s.supplier_ID === product.supplier_ID
+                      )?.name || product.supplier_ID}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-center">
+                      <button
+                        onClick={() =>
+                          handleToggleActiveProduct(
+                            product.product_ID,
+                            product.is_active
+                          )
+                        }
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          product.is_active
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {product.is_active ? "Activo" : "Inactivo"}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleEditProduct(product.product_ID)}
+                          className="inline-flex items-center px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 mr-1"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                          Editar
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleDeleteProduct(
+                              product.product_ID,
+                              product.name
+                            )
+                          }
+                          className="inline-flex items-center px-3 py-1.5  bg-red-500 text-white text-xs font-medium rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 mr-1"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <ProductModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
-}
+};
+
+export const ModifyProduct: React.FC = () => (
+  <ProductProvider>
+    <ModifyProductInner />
+  </ProductProvider>
+);

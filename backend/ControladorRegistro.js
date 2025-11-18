@@ -1,5 +1,6 @@
 import { pool } from "./db.js";
 import bcrypt from "bcrypt";
+import { sendWelcomeEmail } from "./services/EmailService.js";
 
 export const registerUser = async (req, res) => {
   const { firstname, email, password, lastname, rut, phone } = req.body;
@@ -17,9 +18,18 @@ export const registerUser = async (req, res) => {
       [1, rut, email, hashedPassword, firstname, lastname, phone]
     );
 
+    // Enviar email de bienvenida
+    try {
+      await sendWelcomeEmail({
+        userEmail: email,
+        userName: `${firstname} ${lastname}`,
+      });
+    } catch (emailError) {
+      // No fallar el registro si el email falla
+    }
+
     res.json({ message: "Usuario registrado con éxito" });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Error en el servidor" });
   }
 };

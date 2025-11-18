@@ -4,7 +4,6 @@ import bcrypt from "bcrypt";
 function initialize(passport, getUserByEmail, getUserById) {
   const authenticateUser = async (email, password, done) => {
     const user = await getUserByEmail(email);
-    console.log("Usuario encontrado:", user);
     if (!user || !user.user_ID) {
       return done(null, false, {
         message: "No se encontró el usuario con ese correo electrónico",
@@ -22,7 +21,6 @@ function initialize(passport, getUserByEmail, getUserById) {
 
   passport.use(new LocalStrategy({ usernameField: "email" }, authenticateUser));
   passport.serializeUser((user, done) => {
-    console.log("Serializando usuario:", user);
     if (!user || !user.user_ID)
       return done(new Error("Usuario inválido para serializar"));
     done(null, user.user_ID);

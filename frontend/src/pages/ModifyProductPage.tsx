@@ -1,5 +1,5 @@
-import ModifyProductPage from "../components/ModifyProduct";
+import { ModifyProduct } from "../components/ModifyProduct";
 
-export function ModifyProduct() {
-  return <ModifyProductPage />;
+export function ModifyProducto() {
+  return <ModifyProduct />;
 }

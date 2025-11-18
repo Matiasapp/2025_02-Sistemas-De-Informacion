@@ -15,12 +15,10 @@ export default function LogoutButton() {
       setUser(null);
 
       const data = await response.json();
-      console.log(data.message);
 
       alert(data.message || "Sesión cerrada exitosamente");
-    } catch (err) {
-      console.error("Error al cerrar sesión:", err);
-    }
+      navigate("/");
+    } catch (err) {}
   };
 
   return (

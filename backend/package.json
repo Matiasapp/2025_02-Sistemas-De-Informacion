@@ -19,12 +19,14 @@
   },
   "homepage": "https://github.com/Matiasapp/2025_02-Sistemas-De-Informacion#readme",
   "dependencies": {
+    "@paypal/checkout-server-sdk": "^1.0.3",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "multer": "^2.0.2",
     "mysql2": "^3.15.1",
+    "nodemailer": "^7.0.10",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "react-router-dom": "^7.9.4"
