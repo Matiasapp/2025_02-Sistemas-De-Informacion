@@ -24,6 +24,11 @@ export const sendOrderConfirmation = async (orderData) => {
   const { userEmail, userName, orderId, items, totalAmount, shippingAddress } =
     orderData;
 
+  const capitalizedName = userName
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+
   const itemsHtml = items
     .map(
       (item) => `
@@ -71,7 +76,7 @@ export const sendOrderConfirmation = async (orderData) => {
               <p>Pedido #${orderId}</p>
             </div>
             <div class="content">
-              <p>Hola <strong>${userName}</strong>,</p>
+              <p>Hola <strong>${capitalizedName}</strong>,</p>
               <p>Hemos recibido tu pedido y lo estamos preparando. Te notificaremos cuando sea enviado.</p>
               
               <div class="order-details">
@@ -131,6 +136,10 @@ export const sendOrderConfirmation = async (orderData) => {
 // Email de cambio de estado de pedido
 export const sendOrderStatusUpdate = async (orderData) => {
   const { userEmail, userName, orderId, status, statusText } = orderData;
+  const capitalizedName = userName
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 
   const statusColors = {
     pending: "#FFA500",
@@ -170,7 +179,7 @@ export const sendOrderStatusUpdate = async (orderData) => {
               <p>Pedido #${orderId}</p>
             </div>
             <div class="content">
-              <p>Hola <strong>${userName}</strong>,</p>
+              <p>Hola <strong>${capitalizedName}</strong>,</p>
               <p>El estado de tu pedido ha cambiado a:</p>
               <div style="text-align: center; margin: 30px 0;">
                 <span class="status-badge">${statusText}</span>
@@ -207,6 +216,12 @@ export const sendOrderStatusUpdate = async (orderData) => {
 export const sendWelcomeEmail = async (userData) => {
   const { email, firstname } = userData;
 
+  // Capitalizar primera letra de cada palabra
+  const capitalizedName = firstname
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+
   const mailOptions = {
     from: `"Tienda de Ropa" <${process.env.EMAIL_USER}>`,
     to: email,
@@ -234,8 +249,8 @@ export const sendWelcomeEmail = async (userData) => {
               <p>Gracias por unirte a nuestra comunidad</p>
             </div>
             <div class="content">
-              <p>Hola <strong>${firstname}</strong>,</p>
-              <p>¡Nos alegra que formes parte de Tienda de Ropa! Estamos aquí para ofrecerte la mejor experiencia de compra.</p>
+              <p>Hola <strong>${capitalizedName}</strong>,</p>
+              <p>¡Nos alegra que formes parte de nuestra Tienda de Ropa! Estamos aquí para ofrecerte la mejor experiencia de compra.</p>
               
               <div class="benefits">
                 <h3>¿Qué puedes hacer ahora?</h3>
@@ -258,7 +273,7 @@ export const sendWelcomeEmail = async (userData) => {
 
               <div style="text-align: center;">
                 <a href="${
-                  process.env.FRONTEND_URL || "http://localhost:5174"
+                  process.env.FRONTEND_URL || "http://localhost:5173"
                 }" class="button">Comenzar a Comprar</a>
               </div>
 
@@ -285,6 +300,11 @@ export const sendWelcomeEmail = async (userData) => {
 export const sendLowStockAlert = async (products) => {
   const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
 
+  if (!adminEmail) {
+    console.error("No se ha configurado EMAIL_USER o ADMIN_EMAIL en .env");
+    return { success: false, error: "Email del administrador no configurado" };
+  }
+
   const productsHtml = products
     .map(
       (product) => `
@@ -293,7 +313,7 @@ export const sendLowStockAlert = async (products) => {
         product.product_name
       }</td>
       <td style="padding: 10px; border-bottom: 1px solid #eee;">${
-        product.color_name
+        product.color_name || "N/A"
       } - Talla ${product.size}</td>
       <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">
         <span style="background: ${
@@ -306,41 +326,75 @@ export const sendLowStockAlert = async (products) => {
           ${product.stock}
         </span>
       </td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">${
-        product.supplier_name || "N/A"
-      }</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">
+        ${product.supplier_name || "Sin proveedor"}
+        ${
+          product.supplier_phone
+            ? `<br><small style="color: #666;">Tel: ${product.supplier_phone}</small>`
+            : ""
+        }
+      </td>
     </tr>
   `
     )
     .join("");
 
   const mailOptions = {
-    from: `"Tienda de Ropa" <${process.env.EMAIL_USER}>`,
+    from: `"Tienda de Ropa - Sistema de Alertas" <${process.env.EMAIL_USER}>`,
     to: adminEmail,
-    subject: `⚠️ Alerta: ${products.length} producto(s) con stock bajo`,
+    subject: `⚠️ Alerta de Stock Bajo: ${products.length} producto(s) requieren atención`,
     html: `
       <!DOCTYPE html>
       <html>
         <head>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 700px; margin: 0 auto; padding: 20px; }
+            .container { max-width: 800px; margin: 0 auto; padding: 20px; }
             .header { background: #ff9800; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
             .alert-box { background: #fff3cd; border-left: 4px solid #ff9800; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; }
-            th { background: #f5f5f5; padding: 12px; text-align: left; }
+            table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; margin: 20px 0; }
+            th { background: #f5f5f5; padding: 12px; text-align: left; font-weight: bold; border-bottom: 2px solid #ddd; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+            .stats { background: white; padding: 15px; border-radius: 8px; margin: 20px 0; }
+            .stats-item { display: inline-block; margin: 0 15px; }
+            .stats-number { font-size: 24px; font-weight: bold; color: #ff9800; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
               <h1>⚠️ Alerta de Stock Bajo</h1>
+              <p style="margin: 10px 0 0 0; font-size: 14px;">Fecha: ${new Date().toLocaleString(
+                "es-CL",
+                {
+                  dateStyle: "full",
+                  timeStyle: "short",
+                }
+              )}</p>
             </div>
             <div class="content">
               <div class="alert-box">
-                <strong>Atención:</strong> Los siguientes productos tienen stock bajo y requieren reabastecimiento.
+                <strong>⚠️ Atención Administrador:</strong> Los siguientes productos tienen stock bajo y requieren reabastecimiento inmediato.
+              </div>
+
+              <div class="stats">
+                <div class="stats-item">
+                  <div class="stats-number">${products.length}</div>
+                  <div>Productos afectados</div>
+                </div>
+                <div class="stats-item">
+                  <div class="stats-number">${
+                    products.filter((p) => p.stock === 0).length
+                  }</div>
+                  <div>Sin stock</div>
+                </div>
+                <div class="stats-item">
+                  <div class="stats-number">${
+                    products.filter((p) => p.stock > 0 && p.stock < 5).length
+                  }</div>
+                  <div>Stock crítico (< 5)</div>
+                </div>
               </div>
               
               <table>
@@ -357,12 +411,18 @@ export const sendLowStockAlert = async (products) => {
                 </tbody>
               </table>
 
-              <p style="margin-top: 20px;">
-                <strong>Acción recomendada:</strong> Contacta a los proveedores para reabastecer estos productos.
-              </p>
+              <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <strong>📋 Acción recomendada:</strong>
+                <ul style="margin: 10px 0;">
+                  <li>Contacta a los proveedores listados para realizar pedidos de reposición</li>
+                  <li>Verifica los tiempos de entrega estimados</li>
+                  <li>Considera actualizar el estado de disponibilidad en la tienda</li>
+                </ul>
+              </div>
             </div>
             <div class="footer">
               <p>© 2025 Tienda de Ropa - Sistema de Alertas Automáticas</p>
+              <p style="margin-top: 5px; color: #999;">Este es un correo automático. No responder.</p>
             </div>
           </div>
         </body>
@@ -372,8 +432,12 @@ export const sendLowStockAlert = async (products) => {
 
   try {
     await transporter.sendMail(mailOptions);
+    console.log(
+      `✅ Alerta de stock bajo enviada a ${adminEmail} (${products.length} productos)`
+    );
     return { success: true };
   } catch (error) {
+    console.error("❌ Error al enviar alerta de stock bajo:", error);
     return { success: false, error: error.message };
   }
 };

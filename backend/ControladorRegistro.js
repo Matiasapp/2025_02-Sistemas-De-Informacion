@@ -21,15 +21,30 @@ export const registerUser = async (req, res) => {
     // Enviar email de bienvenida
     try {
       await sendWelcomeEmail({
-        userEmail: email,
-        userName: `${firstname} ${lastname}`,
+        email: email,
+        firstname: firstname,
       });
     } catch (emailError) {
       // No fallar el registro si el email falla
+      console.log("Error al enviar email de bienvenida:", emailError);
     }
 
     res.json({ message: "Usuario registrado con éxito" });
   } catch (error) {
+    console.log(error);
+
+    // Verificar si es un error de duplicado de email
+    if (error.code === "ER_DUP_ENTRY" && error.sqlMessage?.includes("email")) {
+      return res
+        .status(409)
+        .json({ message: "Error: Este correo electrónico ya está registrado" });
+    }
+    if (error.code === "ER_DUP_ENTRY" && error.sqlMessage?.includes("rut")) {
+      return res
+        .status(409)
+        .json({ message: "Error: Este RUT ya está registrado" });
+    }
+
     res.status(500).json({ message: "Error en el servidor" });
   }
 };

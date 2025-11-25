@@ -416,6 +416,14 @@ export function ProfilePage() {
   const [comuna, setComuna] = useState("");
   const [postalCode, setPostalCode] = useState("");
 
+  // Función para capitalizar la primera letra de cada palabra
+  const capitalizeFirstLetter = (text: string): string => {
+    return text
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
   // Estados para cambio de contraseña
   const [changingPassword, setChangingPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -437,9 +445,9 @@ export function ProfilePage() {
         const data = await res.json();
         setUserData(data);
 
-        // Inicializar estados de edición
-        setFirstname(data.firstname || "");
-        setLastname(data.lastname || "");
+        // Inicializar estados de edición con capitalización
+        setFirstname(capitalizeFirstLetter(data.firstname || ""));
+        setLastname(capitalizeFirstLetter(data.lastname || ""));
         setPhone(data.phone || "");
         setAddress(data.address || "");
         setRegion(data.region || "");
@@ -462,8 +470,8 @@ export function ProfilePage() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          firstname,
-          lastname,
+          firstname: firstname.toLowerCase(),
+          lastname: lastname.toLowerCase(),
           phone,
           address,
           region,
@@ -528,8 +536,8 @@ export function ProfilePage() {
 
   const handleCancelEdit = () => {
     setEditing(false);
-    setFirstname(userData?.firstname || "");
-    setLastname(userData?.lastname || "");
+    setFirstname(capitalizeFirstLetter(userData?.firstname || ""));
+    setLastname(capitalizeFirstLetter(userData?.lastname || ""));
     setPhone(userData?.phone || "");
     setAddress(userData?.address || "");
     setRegion(userData?.region || "");
@@ -552,12 +560,13 @@ export function ProfilePage() {
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-3xl font-bold text-blue-600">
-              {userData.firstname.charAt(0)}
-              {userData.lastname.charAt(0)}
+              {userData.firstname.charAt(0).toUpperCase()}
+              {userData.lastname.charAt(0).toUpperCase()}
             </div>
             <div>
               <h1 className="text-2xl font-bold">
-                {userData.firstname} {userData.lastname}
+                {capitalizeFirstLetter(userData.firstname)}{" "}
+                {capitalizeFirstLetter(userData.lastname)}
               </h1>
               <p className="text-blue-100">{userData.email}</p>
               <p className="text-sm text-blue-200">
@@ -596,11 +605,19 @@ export function ProfilePage() {
                   <input
                     type="text"
                     value={firstname}
-                    onChange={(e) => setFirstname(e.target.value)}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(
+                        /[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]/g,
+                        ""
+                      );
+                      setFirstname(capitalizeFirstLetter(clean));
+                    }}
                     className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 ) : (
-                  <p className="text-gray-800">{userData.firstname}</p>
+                  <p className="text-gray-800">
+                    {capitalizeFirstLetter(userData.firstname)}
+                  </p>
                 )}
               </div>
 
@@ -613,11 +630,19 @@ export function ProfilePage() {
                   <input
                     type="text"
                     value={lastname}
-                    onChange={(e) => setLastname(e.target.value)}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(
+                        /[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]/g,
+                        ""
+                      );
+                      setLastname(capitalizeFirstLetter(clean));
+                    }}
                     className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 ) : (
-                  <p className="text-gray-800">{userData.lastname}</p>
+                  <p className="text-gray-800">
+                    {capitalizeFirstLetter(userData.lastname)}
+                  </p>
                 )}
               </div>
 

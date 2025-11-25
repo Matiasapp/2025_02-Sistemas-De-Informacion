@@ -18,17 +18,36 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
 }) => {
   const createOrder = async (data: any, actions: any) => {
     try {
+      // Asegurar que el monto tenga exactamente 2 decimales
+      const formattedAmount = parseFloat(amount.toString()).toFixed(2);
+
+      console.log("🔹 Creando orden con monto:", formattedAmount);
+
       const response = await axios.post(
         "http://localhost:3000/api/paypal/create-order",
         {
-          amount: amount.toString(),
+          amount: formattedAmount,
           description: description,
           peticionId: peticionId,
         }
       );
 
+      console.log("✅ Orden creada:", response.data.orderID);
       return response.data.orderID;
     } catch (error: any) {
+      console.error(
+        "❌ Error en createOrder:",
+        error.response?.data || error.message
+      );
+
+      // Mostrar mensaje más amigable al usuario
+      const errorMessage =
+        error.response?.data?.details ||
+        error.response?.data?.error ||
+        "Error al procesar el pago. Por favor, intenta nuevamente.";
+
+      alert(errorMessage);
+
       if (onError) onError(error);
       throw error;
     }

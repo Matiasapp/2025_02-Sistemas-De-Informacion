@@ -145,7 +145,7 @@ export function MyOrdersPage() {
             <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
               <div className="flex-1">
                 <p className="text-sm text-gray-600">
-                  Pedido #{order.order_ID}
+                  Pedido con ID #{order.order_ID}
                 </p>
                 <p className="text-sm text-gray-600">
                   {new Date(order.order_date).toLocaleDateString("es-CL", {

@@ -228,7 +228,12 @@ export function Nav() {
                   onClick={() => setMenuOpen(!menuOpen)}
                   className="flex items-center gap-1 text-gray-700 hover:text-black font-medium ml-2"
                 >
-                  {user ? user.firstname || "Cuenta" : "Iniciar sesión"}
+                  {user
+                    ? user.firstname
+                      ? user.firstname.charAt(0).toUpperCase() +
+                        user.firstname.slice(1).toLowerCase()
+                      : "Cuenta"
+                    : "Iniciar sesión"}
                   <ChevronDownIcon className="h-4 w-4" />
                 </button>
 

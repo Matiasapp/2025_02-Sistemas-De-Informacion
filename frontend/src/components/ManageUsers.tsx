@@ -98,6 +98,8 @@ export default function ManageUsers() {
         throw new Error(data.message || "Error al eliminar el usuario");
       }
 
+      alert(`Usuario "${selectedUser.email}" eliminado correctamente`);
+
       setShowDeleteConfirm(false);
       setSelectedUser(null);
       await fetchUsers();

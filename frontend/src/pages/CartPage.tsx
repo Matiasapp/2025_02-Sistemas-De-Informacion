@@ -866,71 +866,107 @@ export function CartPage() {
                   </p>
                 </div>
 
-                {/* Botón de PayPal - solo se muestra si hay dirección */}
-                {shippingInfo.street &&
-                shippingInfo.commune &&
-                shippingInfo.region ? (
-                  <div>
-                    <PayPalButton
-                      amount={parseFloat((getTotalPrice() / 900).toFixed(2))} // Convertir CLP a USD (aproximado)
-                      description={`Compra de ${items.length} producto(s)`}
-                      peticionId={0}
-                      onSuccess={async (data) => {
-                        try {
-                          // 1. Crear el pedido (estado: pendiente)
-                          const paymentInfo = `Pedido pagado via PayPal - ${data.orderID}`;
-                          const combinedNotes = shippingInfo.notes
-                            ? `${shippingInfo.notes} | ${paymentInfo}`
-                            : paymentInfo;
+                {/* Validar que no haya errores en la dirección */}
+                {(() => {
+                  const hasStreet = shippingInfo.street.trim().length > 0;
+                  const hasStreetNumber = /\d/.test(shippingInfo.street);
+                  const hasCommune = shippingInfo.commune.trim().length > 0;
+                  const hasRegion = shippingInfo.region.trim().length > 0;
+                  const postalCodeValid =
+                    !shippingInfo.postal_code ||
+                    shippingInfo.postal_code.length === 7;
 
-                          const orderResponse = await axios.post(
-                            `${backendUrl}/orders`,
-                            {
-                              items: items,
-                              total_price: getTotalPrice(),
-                              paypal_order_id: data.orderID,
-                              street: shippingInfo.street,
-                              region: shippingInfo.region,
-                              commune: shippingInfo.commune,
-                              postal_code: shippingInfo.postal_code || null,
-                              notes: combinedNotes,
-                            },
-                            { withCredentials: true }
-                          );
+                  const isAddressValid =
+                    hasStreet &&
+                    hasStreetNumber &&
+                    hasCommune &&
+                    hasRegion &&
+                    postalCodeValid;
 
-                          // 2. Confirmar el pago (cambiar estado a: pagado)
-                          await axios.post(
-                            `${backendUrl}/orders/confirm-payment`,
-                            {
-                              orderId: orderResponse.data.order_ID,
-                              paypalOrderId: data.orderID,
-                            },
-                            { withCredentials: true }
-                          );
+                  return isAddressValid ? (
+                    <div>
+                      <PayPalButton
+                        amount={parseFloat((getTotalPrice() / 900).toFixed(2))} // Convertir CLP a USD (aproximado)
+                        description={`Compra de ${items.length} producto(s)`}
+                        peticionId={0}
+                        onSuccess={async (data) => {
+                          try {
+                            // 1. Crear el pedido (estado: pendiente)
+                            const paymentInfo = `Pedido pagado via PayPal - ${data.orderID}`;
+                            const combinedNotes = shippingInfo.notes
+                              ? `${shippingInfo.notes} | ${paymentInfo}`
+                              : paymentInfo;
 
-                          clearCart();
-                          navigate("/payment/success");
-                        } catch (error) {
+                            const orderResponse = await axios.post(
+                              `${backendUrl}/orders`,
+                              {
+                                items: items,
+                                total_price: getTotalPrice(),
+                                paypal_order_id: data.orderID,
+                                street: shippingInfo.street,
+                                region: shippingInfo.region,
+                                commune: shippingInfo.commune,
+                                postal_code: shippingInfo.postal_code || null,
+                                notes: combinedNotes,
+                              },
+                              { withCredentials: true }
+                            );
+
+                            // 2. Confirmar el pago (cambiar estado a: pagado)
+                            await axios.post(
+                              `${backendUrl}/orders/confirm-payment`,
+                              {
+                                orderId: orderResponse.data.order_ID,
+                                paypalOrderId: data.orderID,
+                              },
+                              { withCredentials: true }
+                            );
+
+                            clearCart();
+                            navigate("/payment/success");
+                          } catch (error) {
+                            alert(
+                              "El pago fue exitoso pero hubo un error al guardar el pedido. Por favor contacta a soporte."
+                            );
+                          }
+                        }}
+                        onError={() => {
+                          console.log("Error en el pago con PayPal");
                           alert(
-                            "El pago fue exitoso pero hubo un error al guardar el pedido. Por favor contacta a soporte."
+                            "Hubo un error al procesar el pago. Por favor intenta nuevamente."
                           );
-                        }
-                      }}
-                      onError={(error) => {
-                        alert(
-                          "Hubo un error al procesar el pago. Por favor intenta nuevamente."
-                        );
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-yellow-800">
-                      ⚠️ Completa la dirección de envío (región, comuna y calle)
-                      para continuar con el pago
-                    </p>
-                  </div>
-                )}
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                      <p className="text-xs text-yellow-800">
+                        ⚠️ Completa correctamente la dirección de envío para
+                        continuar con el pago:
+                      </p>
+                      <ul className="text-xs text-yellow-700 mt-2 text-left list-disc list-inside">
+                        {!shippingInfo.region && <li>Selecciona una región</li>}
+                        {!shippingInfo.commune && (
+                          <li>Selecciona una comuna</li>
+                        )}
+                        {!shippingInfo.street.trim() && (
+                          <li>Ingresa la calle</li>
+                        )}
+                        {shippingInfo.street.trim() &&
+                          !/\d/.test(shippingInfo.street) && (
+                            <li>La dirección debe incluir un número</li>
+                          )}
+                        {shippingInfo.postal_code &&
+                          shippingInfo.postal_code.length !== 7 && (
+                            <li>
+                              El código postal debe tener 7 dígitos o estar
+                              vacío
+                            </li>
+                          )}
+                      </ul>
+                    </div>
+                  );
+                })()}
 
                 <button
                   onClick={() => setShowPayment(false)}

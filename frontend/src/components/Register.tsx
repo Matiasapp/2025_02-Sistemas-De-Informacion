@@ -14,6 +14,7 @@ function RegisterForm() {
   });
   const [rutError, setRutError] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Formatea el RUT con puntos y guion
   const formatRUT = (value: string) => {
@@ -38,6 +39,14 @@ function RegisterForm() {
     return clean.length === 9;
   };
 
+  // Capitaliza la primera letra de cada palabra
+  const capitalizeFirstLetter = (text: string): string => {
+    return text
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
@@ -51,10 +60,9 @@ function RegisterForm() {
       }
     } else if (name === "firstname" || name === "lastname") {
       // Solo letras, acentos, ñ y espacios
-      const clean = value
-        .replace(/[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]/g, "")
-        .toLowerCase();
-      setForm({ ...form, [name]: clean });
+      const clean = value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]/g, "");
+      const capitalized = capitalizeFirstLetter(clean);
+      setForm({ ...form, [name]: capitalized });
     } else if (name === "phone") {
       // Solo números, máximo 9 caracteres
       const clean = value.replace(/[^0-9]/g, "");
@@ -108,12 +116,16 @@ function RegisterForm() {
       return;
     }
 
+    setIsLoading(true);
+
     try {
       const cleanRut = form.rut.replace(/[^0-9kK]/g, "").toUpperCase();
       const cleanPhone = form.phone.replace(/[^0-9]/g, "");
 
       const payload = {
         ...form,
+        firstname: form.firstname.toLowerCase(),
+        lastname: form.lastname.toLowerCase(),
         rut: cleanRut,
         phone: cleanPhone,
       };
@@ -124,10 +136,18 @@ function RegisterForm() {
       });
 
       const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Error al registrar usuario");
+        return;
+      }
+
       alert(data.message || "Registro exitoso");
       navigate("/login");
     } catch (err) {
       alert("Error al registrar usuario");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -210,9 +230,40 @@ function RegisterForm() {
 
       <button
         type="submit"
-        className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+        disabled={isLoading}
+        className={`w-full text-white py-2 rounded font-semibold transition ${
+          isLoading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-blue-500 hover:bg-blue-600"
+        }`}
       >
-        Registrarse
+        {isLoading ? (
+          <span className="flex items-center justify-center">
+            <svg
+              className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Registrando...
+          </span>
+        ) : (
+          "Registrarse"
+        )}
       </button>
     </form>
   );

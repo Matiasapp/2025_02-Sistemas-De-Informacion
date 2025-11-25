@@ -76,18 +76,6 @@ export const EliminarUsuario = async (req, res) => {
       });
     }
 
-    // Verificar si hay carritos asociados
-    const [cartsUsingUser] = await pool.query(
-      "SELECT COUNT(*) as count FROM cart WHERE user_ID = ?",
-      [id]
-    );
-
-    if (cartsUsingUser[0].count > 0) {
-      return res.status(400).json({
-        message: `No se puede eliminar el usuario porque tiene ${cartsUsingUser[0].count} carrito(s) asociado(s)`,
-      });
-    }
-
     const [result] = await pool.query("DELETE FROM users WHERE user_ID = ?", [
       id,
     ]);
