@@ -9,6 +9,7 @@ export type Product = {
   main_color_ID: number;
   supplier_ID: number;
   is_active: boolean;
+  main_image?: string;
   variants: Variant[];
 };
 

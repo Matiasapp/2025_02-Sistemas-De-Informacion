@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "./authcontext";
+import { useToast } from "./AlertaToast";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -40,6 +41,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [previousUser, setPreviousUser] = useState<any>(null);
@@ -159,17 +161,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
 
         if (!response.ok) {
-          alert(data.error || "Error al agregar al carrito");
+          showToast(data.error || "Error al agregar al carrito", "error");
           return;
         }
 
         if (data.message) {
-          alert(data.message);
+          showToast(data.message, "info");
         }
 
         await fetchCartFromBackend();
       } catch (error) {
-        alert("Error al agregar al carrito");
+        showToast("Error al agregar al carrito", "error");
       }
     } else {
       // Usuario invitado: usar localStorage
@@ -185,15 +187,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
           );
 
           if (existingItem.quantity >= item.stock) {
-            alert(`No puedes agregar más. Stock disponible: ${item.stock}`);
+            showToast(
+              `No puedes agregar más. Stock disponible: ${item.stock}`,
+              "warning"
+            );
             return prevItems;
           }
 
           if (newQuantity < existingItem.quantity + quantity) {
-            alert(
+            showToast(
               `Solo se pueden agregar ${
                 item.stock - existingItem.quantity
-              } unidades más. Stock máximo: ${item.stock}`
+              } unidades más. Stock máximo: ${item.stock}`,
+              "warning"
             );
           }
 
@@ -204,7 +210,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
           );
         } else {
           if (quantity > item.stock) {
-            alert(`Solo hay ${item.stock} unidades disponibles en stock`);
+            showToast(
+              `Solo hay ${item.stock} unidades disponibles en stock`,
+              "warning"
+            );
             return [...prevItems, { ...item, quantity: item.stock }];
           }
           return [...prevItems, { ...item, quantity }];
@@ -263,7 +272,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
 
         if (!response.ok) {
-          alert(data.error || "Error al actualizar cantidad");
+          showToast(data.error || "Error al actualizar cantidad", "error");
           return;
         }
 

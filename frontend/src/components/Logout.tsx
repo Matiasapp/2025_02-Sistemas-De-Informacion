@@ -1,10 +1,12 @@
 import { useAuth } from "../context/authcontext";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../context/AlertaToast";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 export default function LogoutButton() {
   const { setUser } = useAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const handleLogout = async () => {
     try {
@@ -16,7 +18,7 @@ export default function LogoutButton() {
 
       const data = await response.json();
 
-      alert(data.message || "Sesión cerrada exitosamente");
+      showToast(data.message || "Sesión cerrada exitosamente", "success");
       navigate("/");
     } catch (err) {}
   };

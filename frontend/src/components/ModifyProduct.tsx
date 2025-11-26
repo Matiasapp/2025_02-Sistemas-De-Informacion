@@ -2,10 +2,12 @@ import React, { useState } from "react";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 import { useProductContext, ProductProvider } from "../context/ProductContext";
 import { ProductModal } from "./ModifyProductModal";
+import { useToast } from "../context/AlertaToast";
 
 const ModifyProductInner: React.FC = () => {
   const { products, loading, selectProduct, categories, brands, suppliers } =
     useProductContext();
+  const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Estados de búsqueda y filtros
@@ -37,7 +39,7 @@ const ModifyProductInner: React.FC = () => {
       // Simple refresh to update UI
       window.location.reload();
     } catch (err) {
-      alert("No se pudo cambiar el estado del producto");
+      showToast("No se pudo cambiar el estado del producto", "error");
     }
   };
 
@@ -58,10 +60,10 @@ const ModifyProductInner: React.FC = () => {
 
       if (!res.ok) throw new Error("Error al eliminar producto");
 
-      alert("Producto eliminado exitosamente");
+      showToast("Producto eliminado exitosamente", "success");
       window.location.reload();
     } catch (err) {
-      alert("No se pudo eliminar el producto");
+      showToast("No se pudo eliminar el producto", "error");
     }
   };
 
@@ -218,132 +220,172 @@ const ModifyProductInner: React.FC = () => {
       {/* Products Table */}
       <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 table-auto">
             <thead className=" bg-blue-100">
               <tr>
-                {[
-                  "Producto",
-                  "Categoría",
-                  "Marca",
-                  "Variantes",
-                  "Proveedor",
-                  "Estado",
-                  "Acciones",
-                ].map((title) => (
-                  <th
-                    key={title}
-                    className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                  >
-                    {title}
-                  </th>
-                ))}
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">
+                  Imagen
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Producto
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell">
+                  Categoría
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell">
+                  Marca
+                </th>
+                <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-20">
+                  Var.
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden xl:table-cell">
+                  Proveedor
+                </th>
+                <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">
+                  Estado
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {filteredProducts.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     No se encontraron productos con los filtros seleccionados
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((product) => (
-                  <tr key={product.product_ID}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {product.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {categories.find(
-                        (c) => c.category_ID === product.category_ID
-                      )
-                        ? categories.find(
-                            (c) => c.category_ID === product.category_ID
-                          )!.name
-                        : "Sin categoría"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {brands.find((b) => b.brand_id === product.brand_id)
-                        ?.name || product.brand_id}
-                    </td>
-                    <td className="px-6 py-4 text-center whitespace-nowrap text-sm text-gray-700">
-                      {product.variants?.length || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {suppliers.find(
-                        (s) => s.supplier_ID === product.supplier_ID
-                      )?.name || product.supplier_ID}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-center">
-                      <button
-                        onClick={() =>
-                          handleToggleActiveProduct(
-                            product.product_ID,
-                            product.is_active
-                          )
-                        }
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          product.is_active
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {product.is_active ? "Activo" : "Inactivo"}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEditProduct(product.product_ID)}
-                          className="inline-flex items-center px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 mr-1"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                filteredProducts.map((product) => {
+                  return (
+                    <tr key={product.product_ID}>
+                      <td className="px-3 py-4">
+                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                          {product.main_image ? (
+                            <img
+                              src={product.main_image
+                                .replace("../frontend/public", "")
+                                .replace(/^\.\/+/, "/")}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
                             />
-                          </svg>
-                          Editar
-                        </button>
+                          ) : (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-6 w-6 text-gray-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900">
+                        <div className="max-w-xs truncate">{product.name}</div>
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-700 hidden md:table-cell">
+                        {categories.find(
+                          (c) => c.category_ID === product.category_ID
+                        )?.name || "Sin categoría"}
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-700 hidden lg:table-cell">
+                        {brands.find((b) => b.brand_id === product.brand_id)
+                          ?.name || "-"}
+                      </td>
+                      <td className="px-3 py-4 text-center text-sm">
+                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
+                          {product.variants?.length || 0}
+                        </span>
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-700 hidden xl:table-cell">
+                        <div className="max-w-xs truncate">
+                          {suppliers.find(
+                            (s) => s.supplier_ID === product.supplier_ID
+                          )?.name || "-"}
+                        </div>
+                      </td>
+                      <td className="px-3 py-4 text-center">
                         <button
                           onClick={() =>
-                            handleDeleteProduct(
+                            handleToggleActiveProduct(
                               product.product_ID,
-                              product.name
+                              product.is_active
                             )
                           }
-                          className="inline-flex items-center px-3 py-1.5  bg-red-500 text-white text-xs font-medium rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                            product.is_active
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 mr-1"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                          Eliminar
+                          {product.is_active ? "Activo" : "Inactivo"}
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-2 py-4">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() =>
+                              handleEditProduct(product.product_ID)
+                            }
+                            className="inline-flex items-center px-2 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-all"
+                            title="Editar"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleDeleteProduct(
+                                product.product_ID,
+                                product.name
+                              )
+                            }
+                            className="inline-flex items-center px-2 py-1.5 bg-red-500 text-white text-xs font-medium rounded-lg hover:bg-red-600 transition-all"
+                            title="Eliminar"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

@@ -1,5 +1,6 @@
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import axios from "axios";
+import { useToast } from "../context/AlertaToast";
 
 interface PayPalButtonProps {
   amount: number;
@@ -16,6 +17,8 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
   onSuccess,
   onError,
 }) => {
+  const { showToast } = useToast();
+
   const createOrder = async (data: any, actions: any) => {
     try {
       // Asegurar que el monto tenga exactamente 2 decimales
@@ -24,7 +27,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
       console.log("🔹 Creando orden con monto:", formattedAmount);
 
       const response = await axios.post(
-        "http://localhost:3000/api/paypal/create-order",
+        `${import.meta.env.VITE_BACKEND_URL}/api/paypal/create-order`,
         {
           amount: formattedAmount,
           description: description,
@@ -46,7 +49,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
         error.response?.data?.error ||
         "Error al procesar el pago. Por favor, intenta nuevamente.";
 
-      alert(errorMessage);
+      showToast(errorMessage, "error");
 
       if (onError) onError(error);
       throw error;
@@ -56,7 +59,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
   const onApprove = async (data: any, actions: any) => {
     try {
       const response = await axios.post(
-        "http://localhost:3000/api/paypal/capture-order",
+        `${import.meta.env.VITE_BACKEND_URL}/api/paypal/capture-order`,
         {
           orderID: data.orderID,
         }

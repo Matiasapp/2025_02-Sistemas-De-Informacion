@@ -14,11 +14,12 @@ export const updateProduct = async (req, res) => {
       brand_id,
       supplier_ID,
       main_color_ID,
+      gender,
     } = req.body;
 
     // Actualizar datos básicos del producto
     await pool.query(
-      "UPDATE products SET name = ?, description = ?, category_ID = ?, brand_id = ?, supplier_ID = ?,main_color_ID = ? WHERE product_ID = ?",
+      "UPDATE products SET name = ?, description = ?, category_ID = ?, brand_id = ?, supplier_ID = ?, main_color_ID = ?, gender = ? WHERE product_ID = ?",
       [
         name,
         description,
@@ -26,6 +27,7 @@ export const updateProduct = async (req, res) => {
         brand_id || null,
         supplier_ID || null,
         main_color_ID || null,
+        gender || null,
         id,
       ]
     );
@@ -39,6 +41,7 @@ export const updateProduct = async (req, res) => {
       // Formato parseado: req.body.variants = [{color_ID: "3", size: "S", ...}, ...]
 
       variantsData = req.body.variants.map((v) => ({
+        variant_id: v.variant_id || null,
         color_ID: v.color_ID,
         size: v.size,
         price: v.price,
@@ -56,6 +59,7 @@ export const updateProduct = async (req, res) => {
       // Formato plano: req.body['variants[0][color_ID]'] = "3"
 
       for (let i = 0; ; i++) {
+        const variantIdKey = `variants[${i}][variant_id]`;
         const colorKey = `variants[${i}][color_ID]`;
         const sizeKey = `variants[${i}][size]`;
         const priceKey = `variants[${i}][price]`;
@@ -66,6 +70,7 @@ export const updateProduct = async (req, res) => {
         if (!req.body[colorKey]) break; // No hay más variantes
 
         variantsData.push({
+          variant_id: req.body[variantIdKey] || null,
           color_ID: req.body[colorKey],
           size: req.body[sizeKey],
           price: req.body[priceKey],
@@ -90,28 +95,51 @@ export const updateProduct = async (req, res) => {
 
     // Procesar cada variante recibida (crear o actualizar)
     for (const variantData of variantsData) {
-      // Buscar si ya existe una variante con el mismo color y size
-      // (el SKU puede cambiar si se renombra marca/color, así que no lo usamos para identificar)
-      const existing = existingVariants.find(
-        (v) =>
-          v.color_ID === parseInt(variantData.color_ID) &&
-          v.size === variantData.size
-      );
+      // Si tiene variant_id, usarlo directamente para actualizar
+      // Si no, buscar por color_ID y size (para compatibilidad con creación)
+      let existing = null;
+
+      if (variantData.variant_id) {
+        // Buscar por variant_id si está disponible (convertir ambos a número para comparar)
+        const variantIdToFind = parseInt(variantData.variant_id);
+        existing = existingVariants.find(
+          (v) => v.variant_id === variantIdToFind
+        );
+      } else {
+        // Buscar por color y talla (para variantes nuevas)
+        existing = existingVariants.find(
+          (v) =>
+            v.color_ID === parseInt(variantData.color_ID) &&
+            v.size === variantData.size
+        );
+      }
 
       if (existing) {
-        // Actualizar variante existente (incluyendo SKU por si cambió)
-        await pool.query(
-          `UPDATE product_variants 
-           SET price = ?, stock = ?, sku = ?, is_active = ?
-           WHERE variant_id = ?`,
-          [
-            Number(variantData.price),
-            Number(variantData.stock),
-            variantData.sku,
-            variantData.is_active,
-            existing.variant_id,
-          ]
-        );
+        // Actualizar variante existente solo si hay cambios
+        const hasChanges =
+          existing.color_ID !== Number(variantData.color_ID) ||
+          existing.size !== variantData.size ||
+          existing.price !== Number(variantData.price) ||
+          existing.stock !== Number(variantData.stock) ||
+          existing.sku !== variantData.sku ||
+          existing.is_active !== variantData.is_active;
+
+        if (hasChanges) {
+          await pool.query(
+            `UPDATE product_variants 
+             SET color_ID = ?, size = ?, price = ?, stock = ?, sku = ?, is_active = ?
+             WHERE variant_id = ?`,
+            [
+              Number(variantData.color_ID),
+              variantData.size,
+              Number(variantData.price),
+              Number(variantData.stock),
+              variantData.sku,
+              variantData.is_active,
+              existing.variant_id,
+            ]
+          );
+        }
         processedVariantIds.push(existing.variant_id);
       } else {
         // Crear nueva variante

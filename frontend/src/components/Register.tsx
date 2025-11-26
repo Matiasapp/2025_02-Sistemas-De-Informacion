@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../context/AlertaToast";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 function RegisterForm() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [form, setForm] = useState({
     firstname: "",
     lastname: "",
@@ -138,14 +140,14 @@ function RegisterForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Error al registrar usuario");
+        showToast(data.message || "Error al registrar usuario", "error");
         return;
       }
 
-      alert(data.message || "Registro exitoso");
+      showToast(data.message || "Registro exitoso", "success");
       navigate("/login");
     } catch (err) {
-      alert("Error al registrar usuario");
+      showToast("Error al registrar usuario", "error");
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +159,6 @@ function RegisterForm() {
       className="max-w-md mx-auto p-6 bg-white shadow rounded mt-10"
     >
       <h2 className="text-2xl font-bold mb-4 text-center">Registro</h2>
-
       <input
         type="text"
         name="firstname"
@@ -200,7 +201,6 @@ function RegisterForm() {
         className="w-full border p-2 mb-3 rounded"
         required
       />
-
       <div className="mb-3">
         <input
           type="text"
@@ -227,7 +227,6 @@ function RegisterForm() {
         className="w-full border p-2 mb-4 rounded"
         required
       />
-
       <button
         type="submit"
         disabled={isLoading}
@@ -265,6 +264,16 @@ function RegisterForm() {
           "Registrarse"
         )}
       </button>
+      <div className="mt-4 text-center">
+        <span className="text-gray-600">¿Ya tienes una cuenta? </span>
+        <button
+          type="button"
+          onClick={() => navigate("/login")}
+          className="text-blue-700 hover:underline font-medium"
+        >
+          Inicia sesión
+        </button>
+      </div>
     </form>
   );
 }

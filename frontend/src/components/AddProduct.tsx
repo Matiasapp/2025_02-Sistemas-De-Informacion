@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useToast } from "../context/AlertaToast";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 type Variant = {
@@ -18,6 +19,7 @@ type Brand = { brand_id: number; name: string };
 type ExistingImages = { color_ID: number; urls: string[] };
 
 function AddProductForm() {
+  const { showToast } = useToast();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category_ID, setCategoryID] = useState<number | "">("");
@@ -158,6 +160,17 @@ function AddProductForm() {
   }, [brand_ID]);
 
   const addVariant = () => {
+    // Calcular el total de tallas disponibles
+    const totalPossibleVariants = colors.length * SIZES.length;
+
+    if (variants.length >= totalPossibleVariants) {
+      showToast(
+        "No se pueden agregar más variantes. Todas las combinaciones de color y talla están en uso.",
+        "warning"
+      );
+      return;
+    }
+
     setVariants((prev) => [
       ...prev,
       {
@@ -183,18 +196,21 @@ function AddProductForm() {
       brand_ID === "" ||
       supplier_ID === ""
     ) {
-      alert("Completa todos los campos obligatorios");
+      showToast("Completa todos los campos obligatorios", "error");
       return;
     }
 
     // Verificar que cada variante tenga color, talla y precio válidos
     if (variants.some((v) => v.color_ID === 0 || v.size === "")) {
-      alert("Cada variante debe tener un color y una talla seleccionados");
+      showToast(
+        "Cada variante debe tener un color y una talla seleccionados",
+        "error"
+      );
       return;
     }
 
     if (variants.some((v) => v.price === "" || Number(v.price) < 0)) {
-      alert("Todas las variantes deben tener un precio válido");
+      showToast("Todas las variantes deben tener un precio válido", "error");
       return;
     }
 
@@ -202,8 +218,9 @@ function AddProductForm() {
     const hasMainImage = variants.some((v) => v.mainImageIndex !== undefined);
 
     if (!hasMainImage) {
-      alert(
-        "Debes seleccionar una imagen principal para al menos una variante."
+      showToast(
+        "Debes seleccionar una imagen principal para al menos una variante.",
+        "error"
       );
       return;
     }
@@ -242,9 +259,9 @@ function AddProductForm() {
         body: formData,
       });
       const data = await res.json();
-      alert(data.message || data.error);
 
       if (res.ok) {
+        showToast(data.message || "Producto creado exitosamente", "success");
         // limpiar formulario
         setName("");
         setDescription("");
@@ -263,9 +280,11 @@ function AddProductForm() {
           },
         ]);
         setExistingImages([]);
+      } else {
+        showToast(data.error || "Error al crear producto", "error");
       }
     } catch (err) {
-      alert("Error al crear producto");
+      showToast("Error al crear producto", "error");
     }
   };
 
@@ -579,7 +598,18 @@ function AddProductForm() {
                                     required
                                   >
                                     <option value="">Seleccionar...</option>
-                                    {SIZES.map((s) => (
+                                    {SIZES.filter((s) => {
+                                      // Mostrar la talla actual de esta variante
+                                      if (s === v.size) return true;
+                                      // Ocultar tallas ya usadas en OTRAS variantes del mismo color
+                                      const usedByOther = variants.some(
+                                        (other, otherIdx) =>
+                                          otherIdx !== variantIndex &&
+                                          other.color_ID === v.color_ID &&
+                                          other.size === s
+                                      );
+                                      return !usedByOther;
+                                    }).map((s) => (
                                       <option key={s} value={s}>
                                         {s}
                                       </option>
@@ -978,7 +1008,18 @@ function AddProductForm() {
                                     required
                                   >
                                     <option value="">Seleccionar...</option>
-                                    {SIZES.map((s) => (
+                                    {SIZES.filter((s) => {
+                                      // Mostrar la talla actual de esta variante
+                                      if (s === v.size) return true;
+                                      // Ocultar tallas ya usadas en OTRAS variantes del mismo color
+                                      const usedByOther = variants.some(
+                                        (other, otherIdx) =>
+                                          otherIdx !== i &&
+                                          other.color_ID === v.color_ID &&
+                                          other.size === s
+                                      );
+                                      return !usedByOther;
+                                    }).map((s) => (
                                       <option key={s} value={s}>
                                         {s}
                                       </option>

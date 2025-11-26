@@ -233,8 +233,8 @@ app.get("/products/:id", async (req, res) => {
     // Traer variantes con nombres consistentes
     const [variantRows] = await pool.query(
       `SELECT 
-        variant_id as variant_ID,
-        product_id as product_ID,
+        variant_id,
+        product_id,
         color_ID,
         size,
         price,
@@ -523,6 +523,23 @@ app.get("/products", async (req, res) => {
       [productIds]
     );
 
+    // Obtener imágenes principales del color principal de cada producto
+    const [imageRows] = await pool.query(
+      `SELECT pi.product_id, pi.image_url 
+       FROM product_images pi
+       INNER JOIN products p ON p.product_ID = pi.product_id
+       WHERE pi.product_id IN (?) 
+         AND pi.is_main = 1 
+         AND p.main_color_ID = pi.color_id`,
+      [productIds]
+    );
+
+    // Crear mapa de imágenes
+    const imagesByProduct = {};
+    imageRows.forEach((img) => {
+      imagesByProduct[img.product_id] = img.image_url;
+    });
+
     // Agrupar variantes por product_ID
     const variantsByProduct = {};
     variantRows.forEach((variant) => {
@@ -532,9 +549,10 @@ app.get("/products", async (req, res) => {
       variantsByProduct[variant.product_id].push(variant);
     });
 
-    // Combinar productos con sus variantes
+    // Combinar productos con sus variantes e imagen
     const productsWithVariants = rows.map((product) => ({
       ...product,
+      main_image: imagesByProduct[product.product_ID] || null,
       variants: variantsByProduct[product.product_ID] || [],
     }));
 

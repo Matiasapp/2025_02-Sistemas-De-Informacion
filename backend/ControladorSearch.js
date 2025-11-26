@@ -37,6 +37,7 @@ export const searchProducts = async (req, res) => {
           OR p.description LIKE ?
           OR b.name LIKE ?
           OR c.name LIKE ?
+          or p.gender LIKE ?
         )
       GROUP BY p.product_ID, p.name, p.description, p.gender, c.name, b.name
       ORDER BY p.name;

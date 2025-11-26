@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useToast } from "../context/AlertaToast";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 type User = {
@@ -33,6 +34,7 @@ type UserCart = {
 };
 
 export default function ManageUsers() {
+  const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -98,7 +100,10 @@ export default function ManageUsers() {
         throw new Error(data.message || "Error al eliminar el usuario");
       }
 
-      alert(`Usuario "${selectedUser.email}" eliminado correctamente`);
+      showToast(
+        `Usuario "${selectedUser.email}" eliminado correctamente`,
+        "success"
+      );
 
       setShowDeleteConfirm(false);
       setSelectedUser(null);

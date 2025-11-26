@@ -199,9 +199,9 @@ export function AllProductsPage() {
               className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
             >
               <option value="">Todos</option>
-              <option value="M">Hombre</option>
-              <option value="F">Mujer</option>
-              <option value="U">Unisex</option>
+              <option value="Hombre">Hombre</option>
+              <option value="Mujer">Mujer</option>
+              <option value="Unisex">Unisex</option>
             </select>
           </div>
 

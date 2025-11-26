@@ -155,11 +155,19 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       formData.append("brand_id", product.brand_id?.toString() || "");
       formData.append("supplier_ID", product.supplier_ID?.toString() || "");
       formData.append("main_color_ID", product.main_color_ID?.toString() || "");
+      formData.append("gender", product.gender || "");
 
       let imageCount = 0;
       const processedImages = new Set<string>(); // Para evitar duplicados
 
       variantsToSave.forEach((v, i) => {
+        // Enviar variant_id si existe (para que el backend sepa qué variante actualizar)
+        if (v.variant_id !== undefined) {
+          formData.append(
+            `variants[${i}][variant_id]`,
+            v.variant_id.toString()
+          );
+        }
         formData.append(`variants[${i}][color_ID]`, v.color_ID.toString());
         formData.append(`variants[${i}][size]`, v.size);
         formData.append(`variants[${i}][price]`, v.price.toString());

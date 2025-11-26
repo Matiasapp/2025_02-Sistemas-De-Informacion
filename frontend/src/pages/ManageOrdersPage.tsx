@@ -7,6 +7,7 @@ import {
   TruckIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
+import { useToast } from "../context/AlertaToast";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -37,6 +38,7 @@ interface Order {
 }
 
 export function ManageOrdersPage() {
+  const { showToast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -89,9 +91,9 @@ export function ManageOrdersPage() {
         )
       );
 
-      alert("Estado actualizado correctamente");
+      showToast("Estado actualizado correctamente", "success");
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message, "error");
     }
   };
 

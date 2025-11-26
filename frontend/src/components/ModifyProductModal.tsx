@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useProductContext } from "../context/ProductContext";
+import { useToast } from "../context/AlertaToast";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 import type { Variant } from "../types/types";
 
@@ -7,11 +8,11 @@ interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
 export const ProductModal: React.FC<ProductModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { showToast } = useToast();
   const {
     selectedProduct,
     setSelectedProduct,
@@ -51,9 +52,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       // Deep copy minimal fields
       setLocalProduct(JSON.parse(JSON.stringify(selectedProduct)));
       // Deep copy variants including images array to avoid reference sharing
+      // Asegurar que todas las variantes tengan un tempId si no tienen variant_id
       setLocalVariants(
         (variants || []).map((v) => ({
           ...v,
+          tempId:
+            v.variant_id !== undefined
+              ? undefined
+              : v.tempId || crypto.randomUUID(),
           images: (v.images || []).map((img) => ({ ...img })),
         }))
       );
@@ -104,8 +110,32 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   };
 
   const confirmAddVariants = () => {
+    // Calcular tallas disponibles para el color seleccionado
+    const usedSizesForColor = localVariants
+      .filter((v) => v.color_ID === Number(addColorId))
+      .map((v) => v.size);
+
+    const availableSizes = SIZES.filter((s) => !usedSizesForColor.includes(s));
+
+    // Limitar la cantidad a agregar según las tallas disponibles
+    const maxToAdd = availableSizes.length;
+    const actualQuantity = Math.min(addQuantity || 0, maxToAdd);
+
+    if (actualQuantity === 0) {
+      showToast("No hay más tallas disponibles para este color", "warning");
+      setShowAddModal(false);
+      return;
+    }
+
+    if (actualQuantity < (addQuantity || 0)) {
+      showToast(
+        `Solo se pueden agregar ${actualQuantity} variante(s) para este color`,
+        "warning"
+      );
+    }
+
     const toAdd: Variant[] = [];
-    for (let i = 0; i < (addQuantity || 0); i++) {
+    for (let i = 0; i < actualQuantity; i++) {
       toAdd.push({
         tempId: crypto.randomUUID(),
         isNew: true,
@@ -129,7 +159,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   ) => {
     setLocalVariants((prev) =>
       prev.map((v) => {
-        if (v.variant_id === id || v.tempId === id) {
+        // Crear un ID único consistente para la comparación
+        const variantKey =
+          v.variant_id !== undefined ? String(v.variant_id) : v.tempId;
+        const passedKey = String(id);
+
+        if (variantKey === passedKey) {
           const updated = { ...v, [key]: value };
 
           // Si cambia el color o la talla, regenerar SKU automáticamente
@@ -152,7 +187,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   const handleRemoveVariant = (id: number | string) => {
     setLocalVariants((prev) =>
-      prev.filter((v) => !(v.variant_id === id || v.tempId === id))
+      prev.filter((v) => {
+        const variantKey =
+          v.variant_id !== undefined ? String(v.variant_id) : v.tempId;
+        const passedKey = String(id);
+        return variantKey !== passedKey;
+      })
     );
   };
 
@@ -266,8 +306,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         )
         .join(", ");
 
-      alert(
-        `⚠️ Debes seleccionar una imagen principal para los siguientes colores: ${colorNames}`
+      showToast(
+        `⚠️ Debes seleccionar una imagen principal para los siguientes colores: ${colorNames}`,
+        "error"
       );
       return;
     }
@@ -307,6 +348,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         }
       }
     }
+
+    console.log(
+      "localVariants antes de guardar:",
+      localVariants.map((v) => ({
+        variant_id: v.variant_id,
+        tempId: v.tempId,
+        color_ID: v.color_ID,
+        size: v.size,
+      }))
+    );
 
     // Pass local data directly to saveProduct instead of updating context first
     await saveProduct(localProduct, localVariants);
@@ -405,6 +456,27 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   }
                   placeholder="Ej: Zapatillas deportivas"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Género
+                </label>
+                <select
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                  value={localProduct.gender ?? ""}
+                  onChange={(e) =>
+                    setLocalProduct({
+                      ...localProduct,
+                      gender: e.target.value as "Hombre" | "Mujer" | "Unisex",
+                    })
+                  }
+                >
+                  <option value="">Seleccione género</option>
+                  <option value="Hombre">Hombre</option>
+                  <option value="Mujer">Mujer</option>
+                  <option value="Unisex">Unisex</option>
+                </select>
               </div>
 
               <div>
@@ -630,189 +702,212 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   </div>
 
                   <div className="space-y-3">
-                    {group.variants.map((v) => (
-                      <div
-                        key={v.variant_id ?? v.tempId}
-                        className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-blue-300 transition-all"
-                      >
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">
-                              Talla
-                            </label>
-                            <select
-                              className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                              value={v.size}
-                              onChange={(e) =>
-                                handleVariantChange(
-                                  v.variant_id ?? v.tempId!,
-                                  "size",
-                                  e.target.value
-                                )
-                              }
-                              required
-                            >
-                              <option value="">Seleccionar...</option>
-                              {SIZES.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">
-                              Precio ($)
-                            </label>
-                            <input
-                              type="number"
-                              className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              value={v.price}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(
-                                  /[.,]/g,
-                                  ""
-                                );
-                                handleVariantChange(
-                                  v.variant_id ?? v.tempId!,
-                                  "price",
-                                  Number(value)
-                                );
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "." || e.key === ",") {
-                                  e.preventDefault();
-                                }
-                              }}
-                              step="1"
-                              placeholder="0"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">
-                              Stock
-                            </label>
-                            <input
-                              type="number"
-                              className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              value={v.stock}
-                              onChange={(e) =>
-                                handleVariantChange(
-                                  v.variant_id ?? v.tempId!,
-                                  "stock",
-                                  Number(e.target.value)
-                                )
-                              }
-                              placeholder="0"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">
-                              SKU
-                            </label>
-                            <input
-                              className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 bg-gray-100 text-gray-600"
-                              value={v.sku}
-                              readOnly
-                              placeholder="Auto-generado"
-                            />
-                          </div>
-                        </div>
+                    {group.variants.map((v, idx) => {
+                      // Generar una key única y estable
+                      const variantKey =
+                        v.variant_id !== undefined
+                          ? `variant-${v.variant_id}`
+                          : v.tempId
+                          ? `temp-${v.tempId}`
+                          : `fallback-${group.colorId}-${idx}`;
 
-                        <div className="flex gap-3 justify-end mt-3 pt-3 border-t border-gray-200">
-                          <button
-                            onClick={async () => {
-                              const newState = !v.is_active;
-                              handleVariantChange(
-                                v.variant_id ?? v.tempId!,
-                                "is_active",
-                                newState
-                              );
-
-                              if (v.variant_id) {
-                                try {
-                                  const res = await fetch(
-                                    `${backendUrl}/variants/${v.variant_id}/active`,
-                                    {
-                                      method: "PUT",
-                                      headers: {
-                                        "Content-Type": "application/json",
-                                      },
-                                      body: JSON.stringify({
-                                        is_active: newState,
-                                      }),
-                                    }
-                                  );
-                                  const data = await res.json();
-                                  if (data && data.message) {
-                                  }
-                                } catch (err) {
+                      return (
+                        <div
+                          key={variantKey}
+                          className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-blue-300 transition-all"
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                Talla
+                              </label>
+                              <select
+                                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                value={v.size}
+                                onChange={(e) =>
                                   handleVariantChange(
                                     v.variant_id ?? v.tempId!,
-                                    "is_active",
-                                    !newState
-                                  );
-                                  alert(
-                                    "No se pudo cambiar el estado de la variante"
-                                  );
+                                    "size",
+                                    e.target.value
+                                  )
                                 }
-                              }
-                            }}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                              v.is_active
-                                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            }`}
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              {v.is_active ? (
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              ) : (
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              )}
-                            </svg>
-                            {v.is_active ? "Activa" : "Inactiva"}
-                          </button>
-
-                          <button
-                            onClick={() =>
-                              handleRemoveVariant(v.variant_id ?? v.tempId!)
-                            }
-                            className="px-4 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-all flex items-center gap-2"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                required
+                              >
+                                <option value="">Seleccionar...</option>
+                                {SIZES.filter((s) => {
+                                  // Mostrar la talla actual de esta variante
+                                  if (s === v.size) return true;
+                                  // Ocultar tallas ya usadas en OTRAS variantes del mismo color
+                                  const usedByOther = localVariants.some(
+                                    (other) =>
+                                      other.color_ID === v.color_ID &&
+                                      other.size === s &&
+                                      (other.variant_id !== v.variant_id ||
+                                        other.tempId !== v.tempId)
+                                  );
+                                  return !usedByOther;
+                                }).map((s) => (
+                                  <option key={s} value={s}>
+                                    {s}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                Precio ($)
+                              </label>
+                              <input
+                                type="number"
+                                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                value={v.price}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(
+                                    /[.,]/g,
+                                    ""
+                                  );
+                                  handleVariantChange(
+                                    v.variant_id ?? v.tempId!,
+                                    "price",
+                                    Number(value)
+                                  );
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "." || e.key === ",") {
+                                    e.preventDefault();
+                                  }
+                                }}
+                                step="1"
+                                placeholder="0"
                               />
-                            </svg>
-                            Eliminar
-                          </button>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                Stock
+                              </label>
+                              <input
+                                type="number"
+                                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                value={v.stock}
+                                onChange={(e) =>
+                                  handleVariantChange(
+                                    v.variant_id ?? v.tempId!,
+                                    "stock",
+                                    Number(e.target.value)
+                                  )
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                SKU
+                              </label>
+                              <input
+                                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 bg-gray-100 text-gray-600"
+                                value={v.sku}
+                                readOnly
+                                placeholder="Auto-generado"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3 justify-end mt-3 pt-3 border-t border-gray-200">
+                            <button
+                              onClick={async () => {
+                                const newState = !v.is_active;
+                                handleVariantChange(
+                                  v.variant_id ?? v.tempId!,
+                                  "is_active",
+                                  newState
+                                );
+
+                                if (v.variant_id) {
+                                  try {
+                                    const res = await fetch(
+                                      `${backendUrl}/variants/${v.variant_id}/active`,
+                                      {
+                                        method: "PUT",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                          is_active: newState,
+                                        }),
+                                      }
+                                    );
+                                    const data = await res.json();
+                                    if (data && data.message) {
+                                    }
+                                  } catch (err) {
+                                    handleVariantChange(
+                                      v.variant_id ?? v.tempId!,
+                                      "is_active",
+                                      !newState
+                                    );
+                                    showToast(
+                                      "No se pudo cambiar el estado de la variante",
+                                      "error"
+                                    );
+                                  }
+                                }
+                              }}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                                v.is_active
+                                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                              }`}
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                {v.is_active ? (
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                ) : (
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                )}
+                              </svg>
+                              {v.is_active ? "Activa" : "Inactiva"}
+                            </button>
+
+                            <button
+                              onClick={() =>
+                                handleRemoveVariant(v.variant_id ?? v.tempId!)
+                              }
+                              className="px-4 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-all flex items-center gap-2"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                              Eliminar
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Sección de imágenes */}
                     <div className="mt-4 bg-white rounded-lg p-4 border-2 border-dashed border-gray-300">
@@ -901,8 +996,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                             } catch (err) {
                               // revert optimistic change
                               setLocalVariants(prev);
-                              alert(
-                                "No se pudo eliminar la imagen en el servidor."
+                              showToast(
+                                "No se pudo eliminar la imagen en el servidor.",
+                                "error"
                               );
                             }
                           };
@@ -1139,7 +1235,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     <select
                       className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       value={addColorId}
-                      onChange={(e) => setAddColorId(Number(e.target.value))}
+                      onChange={(e) => {
+                        const newColorId = Number(e.target.value);
+                        setAddColorId(newColorId);
+                        // Recalcular máximo disponible al cambiar color
+                        const usedSizes = localVariants
+                          .filter((v) => v.color_ID === newColorId)
+                          .map((v) => v.size);
+                        const available = SIZES.filter(
+                          (s) => !usedSizes.includes(s)
+                        ).length;
+                        if (addQuantity > available) {
+                          setAddQuantity(Math.max(1, available));
+                        }
+                      }}
                     >
                       {colors.map((c) => (
                         <option key={c.color_ID} value={c.color_ID}>
@@ -1148,17 +1257,36 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       ))}
                     </select>
                   </div>
-                  <div className="mb-6">
+                  <div className="mb-4">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Cantidad
                     </label>
                     <input
                       type="number"
                       min={1}
+                      max={(() => {
+                        const usedSizes = localVariants
+                          .filter((v) => v.color_ID === Number(addColorId))
+                          .map((v) => v.size);
+                        return SIZES.filter((s) => !usedSizes.includes(s))
+                          .length;
+                      })()}
                       className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       value={addQuantity}
                       onChange={(e) => setAddQuantity(Number(e.target.value))}
                     />
+                    <p className="text-sm text-gray-500 mt-2">
+                      Tallas disponibles para este color:{" "}
+                      <span className="font-semibold text-blue-600">
+                        {(() => {
+                          const usedSizes = localVariants
+                            .filter((v) => v.color_ID === Number(addColorId))
+                            .map((v) => v.size);
+                          return SIZES.filter((s) => !usedSizes.includes(s))
+                            .length;
+                        })()}
+                      </span>
+                    </p>
                   </div>
                   <div className="flex justify-end gap-3">
                     <button

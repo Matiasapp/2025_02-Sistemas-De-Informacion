@@ -6,14 +6,19 @@ function initialize(passport, getUserByEmail, getUserById) {
     const user = await getUserByEmail(email);
     if (!user || !user.user_ID) {
       return done(null, false, {
-        message: "No se encontró el usuario con ese correo electrónico",
+        message:
+          "Correo electrónico o contraseña incorrecta. Por favor, vuelve a intentarlo nuevamente.",
       });
     }
 
     try {
       const isMatch = await bcrypt.compare(password, user.password);
       if (isMatch) return done(null, user);
-      else return done(null, false, { message: "Contraseña incorrecta" });
+      else
+        return done(null, false, {
+          message:
+            "Correo electrónico o contraseña incorrecta. Por favor, vuelve a intentarlo nuevamente.",
+        });
     } catch (e) {
       return done(e);
     }

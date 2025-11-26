@@ -5,6 +5,7 @@ import PayPalButton from "../components/PayPalButton";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/authcontext";
+import { useToast } from "../context/AlertaToast";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -393,6 +394,7 @@ const comunasPorRegion: Record<string, string[]> = {
 export function CartPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const { items, removeFromCart, updateQuantity, getTotalPrice, clearCart } =
     useCart();
   const [showPayment, setShowPayment] = useState(false);
@@ -925,15 +927,17 @@ export function CartPage() {
                             clearCart();
                             navigate("/payment/success");
                           } catch (error) {
-                            alert(
-                              "El pago fue exitoso pero hubo un error al guardar el pedido. Por favor contacta a soporte."
+                            showToast(
+                              "El pago fue exitoso pero hubo un error al guardar el pedido. Por favor contacta a soporte.",
+                              "error"
                             );
                           }
                         }}
                         onError={() => {
                           console.log("Error en el pago con PayPal");
-                          alert(
-                            "Hubo un error al procesar el pago. Por favor intenta nuevamente."
+                          showToast(
+                            "Hubo un error al procesar el pago. Por favor intenta nuevamente.",
+                            "error"
                           );
                         }}
                       />

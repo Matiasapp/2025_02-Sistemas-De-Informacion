@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useAuth } from "../context/authcontext";
 import { useCart } from "../context/CartContext";
 import { useNavigate, Link } from "react-router-dom";
+import { useToast } from "../context/AlertaToast";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 function LoginForm() {
   const { setUser, refreshUser } = useAuth();
   const { syncCartOnLogin } = useCart();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +42,7 @@ function LoginForm() {
         await syncCartOnLogin();
 
         // 4. Mostrar mensaje de éxito
-        alert(data.message || "Inicio de sesión exitoso");
+        showToast("¡Inicio de sesión exitoso!", "success");
 
         // 5. Verificar si hay una redirección guardada
         const redirectPath = localStorage.getItem("redirectAfterLogin");
@@ -51,10 +53,10 @@ function LoginForm() {
           navigate("/");
         }
       } else {
-        alert(data.message || "Credenciales inválidas");
+        showToast(data.message || "Credenciales inválidas", "error");
       }
     } catch (err) {
-      alert("Error al iniciar sesión");
+      showToast("Error al iniciar sesión", "error");
     } finally {
       setIsLoading(false);
     }
@@ -100,6 +102,16 @@ function LoginForm() {
         >
           ¿Olvidaste tu contraseña?
         </Link>
+      </div>
+      <div className="mt-4 text-center">
+        <span className="text-gray-600">¿No tienes una cuenta? </span>
+        <button
+          type="button"
+          onClick={() => navigate("/register")}
+          className="text-blue-700 hover:underline font-medium"
+        >
+          Regístrate
+        </button>
       </div>
     </form>
   );

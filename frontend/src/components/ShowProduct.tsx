@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useToast } from "../context/AlertaToast";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 type Image = {
@@ -53,6 +54,7 @@ type Brand = {
 function ProductPage() {
   const { addToCart } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
+  const { showToast } = useToast();
   const [colors, setColors] = useState<Color[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -162,13 +164,16 @@ function ProductPage() {
 
   const handleAddToCart = () => {
     if (!selectedColor || !selectedSize || !selectedVariant || !product) {
-      alert("Por favor selecciona color y talla");
+      showToast("Por favor selecciona color y talla", "warning");
       return;
     }
 
     // Validar que la cantidad no exceda el stock disponible
     if (quantity > selectedVariant.stock) {
-      alert(`Solo hay ${selectedVariant.stock} unidades disponibles en stock`);
+      showToast(
+        `Solo hay ${selectedVariant.stock} unidades disponibles en stock`,
+        "warning"
+      );
       return;
     }
 
@@ -421,7 +426,10 @@ function ProductPage() {
                   if (quantity < maxStock) {
                     setQuantity(quantity + 1);
                   } else {
-                    alert(`Stock máximo disponible: ${maxStock}`);
+                    showToast(
+                      `Stock máximo disponible: ${maxStock}`,
+                      "warning"
+                    );
                   }
                 }}
                 disabled={

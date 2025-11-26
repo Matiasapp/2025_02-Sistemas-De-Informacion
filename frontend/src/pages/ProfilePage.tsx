@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/authcontext";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../context/AlertaToast";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -402,6 +403,7 @@ type UserData = {
 export function ProfilePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -485,9 +487,9 @@ export function ProfilePage() {
       const updatedData = await res.json();
       setUserData(updatedData);
       setEditing(false);
-      alert("Perfil actualizado correctamente");
+      showToast("Perfil actualizado correctamente", "success");
     } catch (err) {
-      alert("Error al actualizar el perfil");
+      showToast("Error al actualizar el perfil", "error");
     } finally {
       setSaving(false);
     }
@@ -495,12 +497,12 @@ export function ProfilePage() {
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      alert("Las contraseñas no coinciden");
+      showToast("Las contraseñas no coinciden", "error");
       return;
     }
 
     if (newPassword.length < 6) {
-      alert("La contraseña debe tener al menos 6 caracteres");
+      showToast("La contraseña debe tener al menos 6 caracteres", "error");
       return;
     }
 
@@ -522,13 +524,13 @@ export function ProfilePage() {
         throw new Error(error.message || "Error al cambiar contraseña");
       }
 
-      alert("Contraseña actualizada correctamente");
+      showToast("Contraseña actualizada correctamente", "success");
       setChangingPassword(false);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: any) {
-      alert(err.message || "Error al cambiar la contraseña");
+      showToast(err.message || "Error al cambiar la contraseña", "error");
     } finally {
       setSaving(false);
     }

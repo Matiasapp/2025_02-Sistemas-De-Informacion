@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useToast } from "../context/AlertaToast";
 
 interface AddSupplierProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export default function AddSupplier({
   onAdded,
   supplier = null,
 }: AddSupplierProps) {
+  const { showToast } = useToast();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -41,7 +43,10 @@ export default function AddSupplier({
 
     // Validar que el teléfono tenga exactamente 9 dígitos
     if (phone && !/^\d{9}$/.test(phone)) {
-      alert("El número de teléfono debe tener exactamente 9 dígitos.");
+      showToast(
+        "El número de teléfono debe tener exactamente 9 dígitos.",
+        "error"
+      );
       return;
     }
 
@@ -71,7 +76,7 @@ export default function AddSupplier({
       setEmail("");
       setPhone("");
     } catch (err) {
-      alert("Ocurrió un error al guardar el proveedor.");
+      showToast("Ocurrió un error al guardar el proveedor.", "error");
     }
   };
 
