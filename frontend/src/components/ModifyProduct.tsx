@@ -5,8 +5,15 @@ import { ProductModal } from "./ModifyProductModal";
 import { useToast } from "../context/AlertaToast";
 
 const ModifyProductInner: React.FC = () => {
-  const { products, loading, selectProduct, categories, brands, suppliers } =
-    useProductContext();
+  const {
+    products,
+    loading,
+    selectProduct,
+    categories,
+    brands,
+    suppliers,
+    refreshProducts,
+  } = useProductContext();
   const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -31,13 +38,15 @@ const ModifyProductInner: React.FC = () => {
       const res = await fetch(`${backendUrl}/products/${product_ID}/active`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ is_active: !currentState }),
       });
 
       if (!res.ok) throw new Error("Error al actualizar estado");
 
-      // Simple refresh to update UI
-      window.location.reload();
+      await refreshProducts();
+
+      showToast("Estado actualizado correctamente", "success");
     } catch (err) {
       showToast("No se pudo cambiar el estado del producto", "error");
     }
@@ -61,7 +70,7 @@ const ModifyProductInner: React.FC = () => {
       if (!res.ok) throw new Error("Error al eliminar producto");
 
       showToast("Producto eliminado exitosamente", "success");
-      window.location.reload();
+      await refreshProducts();
     } catch (err) {
       showToast("No se pudo eliminar el producto", "error");
     }

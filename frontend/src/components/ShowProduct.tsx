@@ -12,7 +12,7 @@ type Image = {
 };
 
 type Variant = {
-  variant_ID: number;
+  variant_id: number;
   product_id: number;
   color_ID: number;
   size: string;
@@ -185,7 +185,7 @@ function ProductPage() {
 
     addToCart(
       {
-        variant_ID: selectedVariant.variant_ID,
+        variant_ID: selectedVariant.variant_id,
         product_ID: product.product_ID,
         product_name: product.name,
         brand_name: brandName || "Sin marca",
@@ -470,9 +470,9 @@ function ProductPage() {
             </p>
             <p>
               <span className="font-semibold">Género:</span>{" "}
-              {product.gender === "M"
+              {product.gender === "Hombre"
                 ? "Hombre"
-                : product.gender === "F"
+                : product.gender === "Mujer"
                 ? "Mujer"
                 : "Unisex"}
             </p>
